@@ -1,0 +1,37 @@
+{
+  "name": "Fiissa",
+  "short_name": "Fiissa",
+  "description": "Commerce intelligent — Click & Collect, Livraison, Scan & Go, Mobile Money",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F7F9FC",
+  "theme_color": "#2257FF",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["shopping", "finance", "business"],
+  "shortcuts": [
+    {
+      "name": "Mes commandes",
+      "short_name": "Commandes",
+      "url": "/orders",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Scanner un article",
+      "short_name": "Scan",
+      "url": "/scan",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "icons": [
+    { "src": "/icons/icon.svg",         "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png" },
+    { "src": "/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

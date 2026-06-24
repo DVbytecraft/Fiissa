@@ -1,0 +1,78 @@
+# ── Python ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+*.dylib
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# ── Secrets & Config ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.cert
+secrets/
+
+# ── Node / Frontend ─────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+
+# ── Tests & Coverage ────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── Docker & Volumes ────────────────────────────────────────────────
+postgres_data/
+redis_data/
+minio_data/
+media/
+uploads/
+
+# ── Logs ────────────────────────────────────────────────────────────
+*.log
+logs/
+backend/logs/
+
+# ── IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Alembic auto-generé ─────────────────────────────────────────────
+# Les versions de migration sont versionées
+# backend/alembic/versions/*.py  ← NE PAS ignorer
+
+# ── Fichiers temporaires ─────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+.cache/
