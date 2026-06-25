@@ -44,20 +44,30 @@ export default function ReceiptsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
           style={{ background: "var(--n-100)" }}
         >
-          <Receipt size={36} style={{ color: "var(--n-400)" }} />
+          <Receipt size={28} strokeWidth={1.5} style={{ color: "#64748B" }} />
         </div>
-        <h2 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+        <h2 className="text-2xl font-bold" style={{ color: "#0F172A" }}>
           Mes reçus
         </h2>
-        <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
+        <p className="mt-1.5 text-sm text-center font-medium" style={{ color: "#64748B" }}>
           Connecte-toi pour consulter tes reçus
         </p>
-        <button className="btn-action mt-6 max-w-xs" onClick={() => router.push("/login")}>
+        <button
+          onClick={() => router.push("/login")}
+          className="mt-6 flex items-center justify-center gap-2 px-8 py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-all"
+          style={{ background: "#0F172A" }}
+        >
           Se connecter
         </button>
+        <p className="mt-3 text-xs" style={{ color: "#64748B" }}>
+          Pas encore de compte ?{" "}
+          <a href="/register" className="font-semibold underline" style={{ color: "var(--p-500)" }}>
+            Créer un compte
+          </a>
+        </p>
       </div>
     );
   }
@@ -76,7 +86,7 @@ export default function ReceiptsPage() {
         className="px-5 py-4 flex items-center justify-between"
         style={{ background: "#FFFFFF", borderBottom: "1px solid var(--bd)" }}
       >
-        <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>Mes reçus</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "#0F172A" }}>Mes reçus</h1>
         {receipts.length > 0 && (
           <button
             onClick={handleExportMonth}

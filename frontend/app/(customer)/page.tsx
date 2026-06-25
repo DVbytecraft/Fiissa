@@ -176,10 +176,10 @@ export default function HomePage() {
           <div className="mb-3 h-5" />
         )}
 
-        <h1 className="text-[28px] font-black leading-tight tracking-tight" style={{ color: "#111111" }}>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight" style={{ color: "#0F172A" }}>
           Bonjour
         </h1>
-        <p className="text-base mt-1 font-medium" style={{ color: "var(--tx-muted)" }}>
+        <p className="text-sm mt-1 font-medium" style={{ color: "#64748B" }}>
           Que voulez-vous faire aujourd'hui ?
         </p>
       </section>

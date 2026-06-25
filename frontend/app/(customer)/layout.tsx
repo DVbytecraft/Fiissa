@@ -86,15 +86,15 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                   style={{
                     width: 48, height: 48,
                     marginTop: -18,
-                    background: "var(--color-action)",
-                    boxShadow: "0 6px 18px rgba(255,159,0,0.42)",
+                    background: "var(--p-500)",
+                    boxShadow: "0 6px 18px rgba(34,87,255,0.32)",
                   }}
                 >
                   <Icon size={22} strokeWidth={2.5} className="text-white" />
                 </div>
                 <span
                   className="text-[10px] mt-0.5 font-bold"
-                  style={{ color: active ? "var(--color-action)" : "var(--tx-muted)" }}
+                  style={{ color: active ? "var(--p-500)" : "var(--tx-muted)" }}
                 >
                   {label}
                 </span>
