@@ -115,7 +115,7 @@ function LoginPageContent() {
 
           {/* Logo app icon — fond sombre intégré, flotte sur le panel */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/2.png" alt="Fiissa" style={{ width: 140, height: 140, borderRadius: 32 }} />
+          <img src="/icons/2.png" alt="Fiissa" style={{ width: 160, height: 160 }} />
 
           {/* Divider */}
           <div className="mt-10 w-10 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
@@ -145,7 +145,7 @@ function LoginPageContent() {
           {/* Logo mobile uniquement */}
           <div className="lg:hidden flex flex-col items-center mb-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/2.png" alt="Fiissa" style={{ width: 72, height: 72, borderRadius: 18 }} />
+            <img src="/icons/2.png" alt="Fiissa" style={{ width: 72, height: 72 }} />
             <p className="mt-3 text-xl font-semibold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
             <p className="text-[10px] font-medium tracking-[0.14em] mt-0.5" style={{ color: "#94A3B8" }}>
               Shop faster, live better
