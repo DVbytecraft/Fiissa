@@ -112,7 +112,7 @@
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     -webkit-tap-highlight-color: transparent;
-    font-family: var(--font-poppins), "Poppins", system-ui, sans-serif;
+    font-family: var(--font-inter), "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Lock, Mail, ShieldCheck } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ type CustomerStep = "credentials" | "otp";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen" style={{ background: "var(--bg-app)" }} />}>
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <LoginPageContent />
     </Suspense>
   );
@@ -57,7 +58,7 @@ function LoginPageContent() {
   const requestOTPMutation = useMutation({
     mutationFn: () => authApi.requestOTP(email.trim(), password),
     onSuccess: () => {
-      toast.success("Code de connexion envoye par email");
+      toast.success("Code de connexion envoyé par email");
       setStep("otp");
     },
     onError: (e: any) => toast.error(e.response?.data?.message || "Identifiants incorrects"),
@@ -102,269 +103,287 @@ function LoginPageContent() {
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background:
-          "radial-gradient(circle at top left, rgba(34,87,255,0.1), transparent 24%), radial-gradient(circle at bottom right, rgba(0,214,143,0.12), transparent 22%), var(--bg-app)",
-      }}
-    >
-      <div className="mx-auto grid min-h-screen max-w-6xl lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative hidden overflow-hidden px-10 py-12 lg:flex lg:flex-col">
-          <div
-            className="absolute inset-6 rounded-[40px]"
-            style={{
-              background: "linear-gradient(145deg, #0D1227 0%, #1333B3 48%, #00AB72 100%)",
-              boxShadow: "0 24px 60px rgba(13,18,39,0.18)",
-            }}
+    <div className="min-h-screen flex lg:grid lg:grid-cols-[1fr_1fr]" style={{ background: "#FFFFFF" }}>
+
+      {/* ══════════════════════════════════════════
+          GAUCHE — Manifeste Fiissa (desktop only)
+      ══════════════════════════════════════════ */}
+      <aside
+        className="hidden lg:flex flex-col items-center justify-center px-14"
+        style={{ background: "#0F172A" }}
+      >
+        <div className="w-full max-w-sm flex flex-col items-center text-center">
+
+          {/* Logo */}
+          <Image
+            src="/icons/icon-512x512.png"
+            alt="Fiissa"
+            width={80}
+            height={80}
+            className="rounded-2xl"
+            priority
           />
-          <div className="absolute left-24 top-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-          <div className="absolute right-16 bottom-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
 
-          <div className="relative z-10 flex h-full flex-col justify-between text-white">
-            <div>
-              <div className="inline-flex h-16 w-16 items-center justify-center rounded-[24px] bg-white/18 text-3xl font-black shadow-lg backdrop-blur">
-                F
-              </div>
-              <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-black uppercase tracking-[0.16em]">
-                <Sparkles size={14} />
-                Smart commerce
-              </div>
-              <h1 className="mt-6 max-w-xl text-5xl font-black leading-[1.05]">
-                La couche d'identite et d'operations qui donne du style au retail.
-              </h1>
-              <p className="mt-5 max-w-lg text-base leading-7 text-white/78">
-                Fiissa relie clients, equipes terrain, paiement, recus et fidelite dans une experience nette, rapide et rassurante.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: "OTP email", value: "Securise" },
-                { label: "Paiements", value: "Fluides" },
-                { label: "Fidelite", value: "Activee" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-[24px] bg-white/10 p-4 backdrop-blur-sm">
-                  <p className="text-sm font-black">{item.value}</p>
-                  <p className="mt-1 text-xs text-white/65">{item.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="flex items-center justify-center px-5 py-8 lg:px-10">
-          <div
-            className="w-full max-w-xl rounded-[32px] border p-5 shadow-sm md:p-7"
-            style={{ background: "var(--bg-card)", borderColor: "rgba(13,18,39,0.06)" }}
+          {/* Wordmark */}
+          <p
+            className="mt-4 text-4xl font-bold tracking-tight"
+            style={{ color: "#FFFFFF", letterSpacing: "-0.02em" }}
           >
-            <div className="lg:hidden">
-              <div
-                className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] text-3xl font-black text-white"
-                style={{ background: "var(--fiissa-gradient)" }}
+            fiissa
+          </p>
+
+          {/* Slogan */}
+          <p
+            className="mt-1 text-xs font-medium tracking-[0.18em] uppercase"
+            style={{ color: "#00D68F" }}
+          >
+            Shop faster. Live better.
+          </p>
+
+          {/* Divider */}
+          <div className="mt-10 w-12 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
+
+          {/* Titre B2B */}
+          <h1
+            className="mt-8 text-2xl font-semibold leading-snug"
+            style={{ color: "#FFFFFF" }}
+          >
+            Gérez vos flux de vente en toute simplicité.
+          </h1>
+
+          {/* Description */}
+          <p
+            className="mt-4 text-sm leading-7"
+            style={{ color: "#E2E8F0", opacity: 0.75 }}
+          >
+            Fiissa centralise le Scan &amp; Go, le Click &amp; Collect et le contrôle de sécurité pour optimiser l'efficacité de votre établissement.
+          </p>
+        </div>
+      </aside>
+
+      {/* ══════════════════════════════════════════
+          DROITE — Formulaire de connexion
+      ══════════════════════════════════════════ */}
+      <main className="flex flex-col items-center justify-center px-5 py-10 lg:px-12">
+        <div className="w-full max-w-sm">
+
+          {/* Logo mobile uniquement */}
+          <div className="lg:hidden flex flex-col items-center mb-8">
+            <Image
+              src="/icons/icon-512x512.png"
+              alt="Fiissa"
+              width={56}
+              height={56}
+              className="rounded-xl"
+              priority
+            />
+            <p className="mt-2 text-xl font-bold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
+            <p className="text-[10px] font-medium tracking-[0.16em] uppercase mt-0.5" style={{ color: "#94A3B8" }}>
+              Shop faster. Live better.
+            </p>
+          </div>
+
+          {/* Étiquette Connexion */}
+          <p
+            className="text-[10px] font-semibold tracking-[0.20em] uppercase mb-5"
+            style={{ color: "#94A3B8" }}
+          >
+            Connexion
+          </p>
+
+          {/* Sélecteur d'espace — style underline minimaliste */}
+          <div className="flex gap-6 mb-6" style={{ borderBottom: "1px solid #E2E8F0" }}>
+            {(["customer", "staff"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => switchMode(m)}
+                className="pb-2.5 text-sm font-medium transition-all"
+                style={{
+                  color: mode === m ? "#0F172A" : "#94A3B8",
+                  borderBottom: mode === m ? "2px solid #0F172A" : "2px solid transparent",
+                  marginBottom: -1,
+                }}
               >
-                F
-              </div>
-              <p className="mt-4 text-center text-xs font-black uppercase tracking-[0.18em]" style={{ color: "var(--p-500)" }}>
-                Smart commerce
-              </p>
-            </div>
+                {m === "customer" ? "Client" : "Employé / Admin"}
+              </button>
+            ))}
+          </div>
 
-            <div className="mt-3 text-center lg:mt-0 lg:text-left">
-              <h2 className="text-3xl font-black leading-tight" style={{ color: "var(--tx-head)" }}>
-                Connexion Fiissa
-              </h2>
-              <p className="mt-2 text-sm leading-6" style={{ color: "var(--tx-muted)" }}>
-                Choisis ton espace puis connecte-toi avec un parcours clair et protege.
-              </p>
-            </div>
-
+          {/* Alerte OTP */}
+          {mode === "customer" && step === "otp" && (
             <div
-              className="mt-6 grid grid-cols-2 gap-2 rounded-[24px] p-1"
-              style={{ background: "var(--n-100)" }}
+              className="mb-5 flex items-start gap-3 rounded-xl p-3.5"
+              style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}
             >
-              {(["customer", "staff"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => switchMode(m)}
-                  className="rounded-[20px] px-4 py-3 text-sm font-black transition-all"
-                  style={
-                    mode === m
-                      ? { background: "var(--bg-card)", color: "var(--tx-head)", boxShadow: "var(--sh-sm)" }
-                      : { background: "transparent", color: "var(--tx-muted)" }
-                  }
-                >
-                  {m === "customer" ? "Client" : "Employe / Admin"}
-                </button>
-              ))}
+              <ShieldCheck size={16} style={{ color: "#2257FF", marginTop: 1, flexShrink: 0 }} />
+              <div>
+                <p className="text-xs font-semibold" style={{ color: "#1E40AF" }}>Vérification en cours</p>
+                <p className="text-xs mt-0.5 leading-5" style={{ color: "#3B82F6" }}>
+                  Code envoyé à <strong>{email}</strong>
+                </p>
+              </div>
             </div>
+          )}
 
-            {mode === "customer" && step === "otp" && (
-              <div
-                className="mt-5 rounded-[24px] p-4"
-                style={{ background: "rgba(34,87,255,0.06)", border: "1px solid rgba(34,87,255,0.1)" }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-                    style={{ background: "rgba(34,87,255,0.1)", color: "var(--p-500)" }}
-                  >
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black" style={{ color: "var(--tx-head)" }}>
-                      Verification en cours
-                    </p>
-                    <p className="mt-1 text-sm leading-6" style={{ color: "var(--tx-muted)" }}>
-                      Un code a 6 chiffres vient d'etre envoye a <strong>{email}</strong>.
-                    </p>
+          {/* Champs email + mot de passe */}
+          <div className="space-y-3">
+            {(mode === "staff" || step === "credentials") && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>
+                    Adresse e-mail
+                  </label>
+                  <div className="relative">
+                    <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#94A3B8" }} />
+                    <input
+                      type="email"
+                      placeholder="vous@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoFocus
+                      className="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg outline-none transition-all"
+                      style={{
+                        border: "1px solid #E2E8F0",
+                        color: "#0F172A",
+                        background: "#F8FAFC",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "#2257FF")}
+                      onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+                    />
                   </div>
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium" style={{ color: "#64748B" }}>
+                      Mot de passe
+                    </label>
+                    <Link href="/forgot-password" className="text-xs font-medium" style={{ color: "#2257FF" }}>
+                      Oublié ?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#94A3B8" }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg outline-none transition-all"
+                      style={{
+                        border: "1px solid #E2E8F0",
+                        color: "#0F172A",
+                        background: "#F8FAFC",
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "#2257FF")}
+                      onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Mode client — étape OTP */}
+            {mode === "customer" && step === "otp" && (
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>
+                  Code à 6 chiffres
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="——————"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  autoFocus
+                  className="w-full py-2.5 text-center rounded-lg outline-none transition-all"
+                  style={{
+                    letterSpacing: "0.5em",
+                    fontSize: "1.5rem",
+                    fontWeight: 700,
+                    fontFamily: "monospace",
+                    border: "1px solid #E2E8F0",
+                    color: "#0F172A",
+                    background: "#F8FAFC",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#2257FF")}
+                  onBlur={(e) => (e.target.style.borderColor = "#E2E8F0")}
+                />
               </div>
             )}
 
-            <div className="mt-6 space-y-4">
-              {(mode === "staff" || step === "credentials") && (
-                <>
-                  <div>
-                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
-                      Email
-                    </label>
-                    <div className="relative">
-                      <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--tx-muted)" }} />
-                      <input
-                        type="email"
-                        placeholder="vous@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="input-mobile pl-11"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
+            {/* ── CTA Bouton ── */}
+            {mode === "customer" && step === "credentials" && (
+              <button
+                onClick={() => requestOTPMutation.mutate()}
+                disabled={!email.trim() || password.length < 8 || requestOTPMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-40 mt-1"
+                style={{ background: "#FF9F00", color: "#0F172A" }}
+              >
+                {requestOTPMutation.isPending ? (
+                  <><span className="spinner border-current border-t-transparent" /> Envoi…</>
+                ) : (
+                  <>Recevoir mon code <ArrowRight size={15} /></>
+                )}
+              </button>
+            )}
 
-                  <div>
-                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
-                      Mot de passe
-                    </label>
-                    <div className="relative">
-                      <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--tx-muted)" }} />
-                      <input
-                        type="password"
-                        placeholder="Entrez votre mot de passe"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="input-mobile pl-11"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {mode === "customer" && step === "credentials" && (
-                <>
-                  <button
-                    onClick={() => requestOTPMutation.mutate()}
-                    disabled={!email.trim() || password.length < 8 || requestOTPMutation.isPending}
-                    className="btn-primary"
-                  >
-                    {requestOTPMutation.isPending ? (
-                      <>
-                        <span className="spinner border-white border-t-transparent" /> Envoi...
-                      </>
-                    ) : (
-                      <>
-                        Recevoir mon code <ArrowRight size={18} />
-                      </>
-                    )}
-                  </button>
-
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <Link href="/register" className="font-black" style={{ color: "var(--p-500)" }}>
-                      Creer un compte
-                    </Link>
-                    <Link href="/forgot-password" className="font-semibold" style={{ color: "var(--tx-muted)" }}>
-                      Mot de passe oublie ?
-                    </Link>
-                  </div>
-                </>
-              )}
-
-              {mode === "customer" && step === "otp" && (
-                <>
-                  <div>
-                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
-                      Code a 6 chiffres
-                    </label>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="------"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                      autoFocus
-                      style={{
-                        letterSpacing: "0.5em",
-                        fontSize: "2rem",
-                        fontWeight: 900,
-                        textAlign: "center",
-                        fontFamily: "monospace",
-                      }}
-                      className="input-mobile"
-                    />
-                  </div>
-                  <button
-                    onClick={() => verifyOTPMutation.mutate()}
-                    disabled={otp.length !== 6 || verifyOTPMutation.isPending}
-                    className="btn-primary"
-                  >
-                    {verifyOTPMutation.isPending ? (
-                      <>
-                        <span className="spinner border-white border-t-transparent" /> Verification...
-                      </>
-                    ) : (
-                      "Valider le code"
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStep("credentials");
-                      setOtp("");
-                    }}
-                    className="w-full py-3 text-center text-sm font-bold"
-                    style={{ color: "var(--p-500)" }}
-                  >
-                    Modifier mes identifiants
-                  </button>
-                </>
-              )}
-
-              {mode === "staff" && (
+            {mode === "customer" && step === "otp" && (
+              <>
                 <button
-                  onClick={() => staffLoginMutation.mutate()}
-                  disabled={!email.trim() || !password || staffLoginMutation.isPending}
-                  className="btn-primary"
+                  onClick={() => verifyOTPMutation.mutate()}
+                  disabled={otp.length !== 6 || verifyOTPMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-40 mt-1"
+                  style={{ background: "#FF9F00", color: "#0F172A" }}
                 >
-                  {staffLoginMutation.isPending ? (
-                    <>
-                      <span className="spinner border-white border-t-transparent" /> Connexion...
-                    </>
+                  {verifyOTPMutation.isPending ? (
+                    <><span className="spinner border-current border-t-transparent" /> Vérification…</>
                   ) : (
-                    <>
-                      Se connecter <ArrowRight size={18} />
-                    </>
+                    "Valider le code"
                   )}
                 </button>
-              )}
-            </div>
+                <button
+                  onClick={() => { setStep("credentials"); setOtp(""); }}
+                  className="w-full py-2 text-center text-xs font-medium"
+                  style={{ color: "#94A3B8" }}
+                >
+                  ← Modifier mes identifiants
+                </button>
+              </>
+            )}
 
-            <p className="mt-6 text-center text-xs" style={{ color: "var(--tx-muted)" }}>
-              Fiissa SaaS · Commerce UEMOA
-            </p>
+            {mode === "staff" && (
+              <button
+                onClick={() => staffLoginMutation.mutate()}
+                disabled={!email.trim() || !password || staffLoginMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-40 mt-1"
+                style={{ background: "#0F172A", color: "#FFFFFF" }}
+              >
+                {staffLoginMutation.isPending ? (
+                  <><span className="spinner border-white border-t-transparent" /> Connexion…</>
+                ) : (
+                  <>Se connecter <ArrowRight size={15} /></>
+                )}
+              </button>
+            )}
           </div>
-        </section>
-      </div>
+
+          {/* Créer un compte */}
+          {mode === "customer" && step === "credentials" && (
+            <p className="mt-5 text-center text-xs" style={{ color: "#94A3B8" }}>
+              Pas encore de compte ?{" "}
+              <Link href="/register" className="font-semibold" style={{ color: "#2257FF" }}>
+                Créer un compte
+              </Link>
+            </p>
+          )}
+
+          <p className="mt-8 text-center text-[10px]" style={{ color: "#CBD5E1" }}>
+            Fiissa SaaS · Commerce UEMOA
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
