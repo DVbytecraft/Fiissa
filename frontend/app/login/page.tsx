@@ -113,24 +113,9 @@ function LoginPageContent() {
       >
         <div className="w-full max-w-sm flex flex-col items-center text-center">
 
-          {/* Logo F sur fond blanc arrondi */}
-          <div
-            className="flex items-center justify-center rounded-3xl overflow-hidden"
-            style={{ background: "#FFFFFF", width: 110, height: 110 }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/3.png" alt="Fiissa" style={{ width: 88, height: 88, objectFit: "contain" }} />
-          </div>
-
-          {/* Wordmark */}
-          <p className="mt-5 text-3xl font-semibold tracking-tight" style={{ color: "#FFFFFF", letterSpacing: "-0.02em" }}>
-            fiissa
-          </p>
-
-          {/* Slogan */}
-          <p className="mt-1 text-xs font-medium tracking-[0.14em]" style={{ color: "#00D68F" }}>
-            Shop faster, live better
-          </p>
+          {/* Logo app icon — fond sombre intégré, flotte sur le panel */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/2.png" alt="Fiissa" style={{ width: 140, height: 140, borderRadius: 32 }} />
 
           {/* Divider */}
           <div className="mt-10 w-10 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
@@ -140,14 +125,10 @@ function LoginPageContent() {
             Gérez vos flux de vente en toute simplicité.
           </h1>
 
-          {/* Fonctionnalités clés */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {/* Fonctionnalités clés — texte jaune, sans fond */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             {["Scan & Go", "Click & Collect", "Contrôle sécurité"].map((f) => (
-              <span
-                key={f}
-                className="px-3 py-1 rounded-full text-xs font-medium"
-                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.60)", border: "1px solid rgba(255,255,255,0.10)" }}
-              >
+              <span key={f} className="text-xs font-medium" style={{ color: "#FF9F00" }}>
                 {f}
               </span>
             ))}
@@ -164,8 +145,8 @@ function LoginPageContent() {
           {/* Logo mobile uniquement */}
           <div className="lg:hidden flex flex-col items-center mb-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/3.png" alt="Fiissa" style={{ width: 64, height: 64, objectFit: "contain" }} />
-            <p className="mt-2 text-xl font-semibold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
+            <img src="/icons/2.png" alt="Fiissa" style={{ width: 72, height: 72, borderRadius: 18 }} />
+            <p className="mt-3 text-xl font-semibold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
             <p className="text-[10px] font-medium tracking-[0.14em] mt-0.5" style={{ color: "#94A3B8" }}>
               Shop faster, live better
             </p>
