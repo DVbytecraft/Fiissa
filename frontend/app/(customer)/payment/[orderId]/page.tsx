@@ -270,7 +270,7 @@ export default function PaymentPage() {
               manualSubmitMutation.mutate();
             }}
             disabled={!txRef.trim() || manualSubmitMutation.isPending}
-            className="btn-action"
+            className="btn-primary"
           >
             {manualSubmitMutation.isPending ? (
               <span className="flex items-center gap-2">
@@ -372,7 +372,7 @@ export default function PaymentPage() {
             </p>
           </div>
 
-          <button onClick={() => setStep("submit")} className="btn-action">
+          <button onClick={() => setStep("submit")} className="btn-primary">
             J'ai effectué le transfert →
           </button>
         </div>
@@ -412,7 +412,7 @@ export default function PaymentPage() {
           <button
             onClick={() => submitMutation.mutate()}
             disabled={!txRef.trim() || submitMutation.isPending}
-            className="btn-action"
+            className="btn-primary"
           >
             {submitMutation.isPending
               ? <span className="flex items-center gap-2"><div className="spinner border-white border-t-transparent" />Vérification…</span>

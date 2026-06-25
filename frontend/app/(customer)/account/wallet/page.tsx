@@ -162,7 +162,7 @@ function AddSheet({ onClose, existingCount }: { onClose: () => void; existingCou
           <button
             onClick={() => addMutation.mutate()}
             disabled={!canSubmit}
-            className="btn-action"
+            className="btn-primary"
           >
             {addMutation.isPending ? "Ajout en cours…" : "Enregistrer ce numéro"}
           </button>

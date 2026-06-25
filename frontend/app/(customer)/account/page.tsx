@@ -93,7 +93,7 @@ export default function AccountPage() {
         <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
           Connecte-toi pour accéder à ton compte
         </p>
-        <button className="btn-action mt-6 max-w-xs" onClick={() => router.push("/login")}>
+        <button className="btn-primary mt-6 max-w-xs" onClick={() => router.push("/login")}>
           Se connecter
         </button>
         <button
@@ -272,7 +272,7 @@ export default function AccountPage() {
           <button
             onClick={() => updateProfileMutation.mutate()}
             disabled={!firstName.trim() || !lastName.trim() || updateProfileMutation.isPending}
-            className="btn-action"
+            className="btn-primary"
           >
             <Save size={18} />
             {updateProfileMutation.isPending ? "Sauvegarde…" : "Sauvegarder"}

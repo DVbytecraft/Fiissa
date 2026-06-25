@@ -72,7 +72,7 @@ export default function CartPage() {
         <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
           Ajoute des produits depuis un commerce
         </p>
-        <button onClick={() => router.push("/")} className="btn-action mt-6 max-w-xs">
+        <button onClick={() => router.push("/")} className="btn-primary mt-6 max-w-xs">
           Découvrir les commerces
         </button>
       </div>
@@ -321,7 +321,7 @@ export default function CartPage() {
         <button
           onClick={handleCheckout}
           disabled={createOrderMutation.isPending}
-          className="btn-action"
+          className="btn-primary"
         >
           {createOrderMutation.isPending ? (
             <span className="flex items-center gap-2">

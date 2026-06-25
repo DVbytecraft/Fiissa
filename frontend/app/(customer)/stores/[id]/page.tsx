@@ -4,8 +4,8 @@ import { useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, MapPin, Minus, Plus, Search,
-  ShoppingBag, Zap, Store, Truck, Check,
+  ArrowLeft, MapPin, Minus, Plus, ScanLine, Search,
+  ShoppingBag, Store, Truck,
 } from "lucide-react";
 import { storesApi, catalogApi } from "@/lib/api";
 import { useCartStore } from "@/lib/store";
@@ -111,8 +111,8 @@ function ProductRow({
               onClick={onAdd}
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform active:scale-90"
               style={{
-                background: "var(--color-action)",
-                boxShadow: "0 3px 10px rgba(255,159,0,0.30)",
+                background: "var(--p-500)",
+                boxShadow: "0 3px 10px rgba(34,87,255,0.22)",
               }}
             >
               <Plus size={14} className="text-white" strokeWidth={2.5} />
@@ -124,8 +124,8 @@ function ProductRow({
             disabled={outOfStock}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform active:scale-90 disabled:opacity-40"
             style={{
-              background: outOfStock ? "var(--n-200)" : "var(--color-action)",
-              boxShadow: outOfStock ? "none" : "0 4px 12px rgba(255,159,0,0.30)",
+              background: outOfStock ? "var(--n-200)" : "var(--p-500)",
+              boxShadow: outOfStock ? "none" : "0 4px 12px rgba(34,87,255,0.22)",
             }}
           >
             <Plus size={18} className="text-white" strokeWidth={2.5} />
@@ -245,7 +245,7 @@ export default function StorePage() {
 
   /* ── Services badges ── */
   const services = [];
-  if (store?.scan_go_enabled)       services.push({ label: "Scan & Go", icon: Zap,   color: "var(--color-action)" });
+  if (store?.scan_go_enabled)       services.push({ label: "Scan & Go", icon: ScanLine, color: "var(--p-500)" });
   if (store?.click_collect_enabled) services.push({ label: "Retrait",   icon: Store, color: "#111111" });
   if (store?.delivery_enabled)      services.push({ label: "Livraison", icon: Truck, color: "#111111" });
 
@@ -433,7 +433,7 @@ export default function StorePage() {
               <button
                 onClick={() => setSearch("")}
                 className="mt-3 text-sm font-bold"
-                style={{ color: "var(--color-action)" }}
+                style={{ color: "var(--p-500)" }}
               >
                 Effacer la recherche
               </button>

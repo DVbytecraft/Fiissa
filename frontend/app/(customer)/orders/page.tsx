@@ -33,7 +33,7 @@ export default function OrdersPage() {
         <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
           Connecte-toi pour voir tes commandes
         </p>
-        <button className="btn-action mt-6 max-w-xs" onClick={() => router.push("/login")}>
+        <button className="btn-primary mt-6 max-w-xs" onClick={() => router.push("/login")}>
           Se connecter
         </button>
       </div>

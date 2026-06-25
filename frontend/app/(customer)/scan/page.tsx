@@ -4,19 +4,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import {
-  Scan, Minus, Plus, Trash2, ShoppingCart, X,
-  ChevronLeft, Camera, CameraOff, CheckCircle,
+  ScanLine, Minus, Plus, Trash2,
+  ChevronLeft, CameraOff,
 } from "lucide-react";
 import { catalogApi, ordersApi } from "@/lib/api";
 import { toast } from "sonner";
 
 interface ScannedItem {
-  productId: string;
+  productId:   string;
   productName: string;
-  barcode: string;
-  unitPrice: number;
-  quantity: number;
-  imageUrl?: string;
+  barcode:     string;
+  unitPrice:   number;
+  quantity:    number;
+  imageUrl?:   string;
 }
 
 export default function ScanGoPage() {
@@ -25,65 +25,49 @@ export default function ScanGoPage() {
   const streamRef       = useRef<MediaStream | null>(null);
   const detectorRef     = useRef<any>(null);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastScannedRef  = useRef<string>("");
 
-  const [isScanning, setIsScanning]   = useState(false);
+  const [isScanning,  setIsScanning]  = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [items, setItems]             = useState<ScannedItem[]>([]);
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
-  const [lookupCode, setLookupCode]   = useState("");
-  const [storeId, setStoreId]         = useState("");
+  const [items,       setItems]       = useState<ScannedItem[]>([]);
+  const [lookupCode,  setLookupCode]  = useState("");
+  const [storeId,     setStoreId]     = useState("");
+  const [submitting,  setSubmitting]  = useState(false);
 
-  const total     = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total     = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
+  /* ── Lookup produit par code-barres ── */
   const lookupMutation = useMutation({
     mutationFn: (barcode: string) =>
       catalogApi.getByBarcode(barcode, storeId || undefined).then((r) => r.data),
     onSuccess: (product, barcode) => {
-      setLastScanned(barcode);
-      addItem(product, barcode);
-    },
-    onError: (e: any, barcode) => {
-      if (e.response?.status === 404) {
-        toast.error(`Code ${barcode} introuvable dans ce catalogue`);
-      } else {
-        toast.error("Erreur réseau — réessayez");
-      }
-    },
-  });
-
-  const addItem = (product: any, barcode: string) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
-      if (existing) {
-        toast.success(`${product.name} × ${existing.quantity + 1}`);
-        return prev.map((i) =>
-          i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      toast.success(`${product.name} ajouté`);
-      return [
-        ...prev,
-        {
+      lastScannedRef.current = barcode;
+      setItems((prev) => {
+        const ex = prev.find((i) => i.productId === product.id);
+        if (ex) {
+          toast.success(`${product.name} ×${ex.quantity + 1}`, { duration: 900 });
+          return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        }
+        toast.success(product.name, { duration: 900 });
+        return [...prev, {
           productId:   product.id,
           productName: product.name,
           barcode,
           unitPrice:   product.price_xof,
           quantity:    1,
           imageUrl:    product.image_url,
-        },
-      ];
-    });
-  };
+        }];
+      });
+    },
+    onError: (e: any, barcode) => {
+      lastScannedRef.current = barcode;
+      if (e.response?.status === 404) toast.error(`Code ${barcode} inconnu`);
+      else toast.error("Erreur réseau");
+    },
+  });
 
-  const updateQty = (productId: string, delta: number) => {
-    setItems((prev) =>
-      prev
-        .map((i) => (i.productId === productId ? { ...i, quantity: i.quantity + delta } : i))
-        .filter((i) => i.quantity > 0)
-    );
-  };
-
+  /* ── Caméra ── */
   const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
@@ -100,33 +84,31 @@ export default function ScanGoPage() {
           formats: ["ean_13", "ean_8", "qr_code", "code_128", "code_39", "upc_a", "upc_e"],
         });
         scanIntervalRef.current = setInterval(async () => {
-          if (!videoRef.current || !detectorRef.current) return;
+          if (!videoRef.current || !detectorRef.current || lookupMutation.isPending) return;
           try {
             const barcodes = await detectorRef.current.detect(videoRef.current);
             if (barcodes.length > 0) {
               const code = barcodes[0].rawValue;
-              if (code !== lastScanned && !lookupMutation.isPending) {
-                lookupMutation.mutate(code);
-              }
+              if (code !== lastScannedRef.current) lookupMutation.mutate(code);
             }
           } catch {}
-        }, 800);
+        }, 700);
       } else {
-        setCameraError("BarcodeDetector non supporté — utilise la saisie manuelle.");
+        setCameraError("Scanner non supporté — utilisez la saisie manuelle ci-dessous.");
       }
       setIsScanning(true);
     } catch (err: any) {
-      if (err.name === "NotAllowedError") {
-        setCameraError("Accès caméra refusé. Autorise-la dans les paramètres du navigateur.");
-      } else {
+      if (err.name === "NotAllowedError")
+        setCameraError("Accès caméra refusé — autorisez-le dans les paramètres.");
+      else
         setCameraError("Impossible d'accéder à la caméra.");
-      }
     }
-  }, [lastScanned, lookupMutation]);
+  }, [lookupMutation]);
 
   const stopCamera = useCallback(() => {
     if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
     setIsScanning(false);
   }, []);
 
@@ -136,8 +118,17 @@ export default function ScanGoPage() {
     return () => stopCamera();
   }, [stopCamera]);
 
-  const convertToOrder = async () => {
-    if (!items.length) return;
+  /* ── Quantité ── */
+  const updateQty = (productId: string, delta: number) =>
+    setItems((prev) =>
+      prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i)
+          .filter((i) => i.quantity > 0)
+    );
+
+  /* ── Validation commande ── */
+  const handleCheckout = async () => {
+    if (!items.length || submitting) return;
+    setSubmitting(true);
     try {
       const res = await ordersApi.createScanGoOrder({
         store_id:   storeId,
@@ -148,137 +139,157 @@ export default function ScanGoPage() {
       router.push(`/payment/${res.data.id}`);
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Erreur création commande");
+      setSubmitting(false);
     }
   };
 
   const handleManualBarcode = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!lookupCode.trim()) return;
+    if (!lookupCode.trim() || lookupMutation.isPending) return;
     lookupMutation.mutate(lookupCode.trim());
     setLookupCode("");
   };
 
+  /* ═══════════════════════════════════════════
+     RENDU
+  ═══════════════════════════════════════════ */
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#111111" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#0A0A0F" }}>
 
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-5 pt-12 pb-4">
         <button
           onClick={() => { stopCamera(); router.back(); }}
-          className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0"
-          style={{ background: "rgba(255,255,255,0.10)" }}
+          className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0 transition-colors active:bg-white/10"
+          style={{ background: "rgba(255,255,255,0.07)" }}
         >
-          <ChevronLeft size={20} className="text-white" />
+          <ChevronLeft size={18} className="text-white" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-white font-black text-lg leading-tight">Scan & Go</h1>
-          <p className="text-white/50 text-xs mt-0.5">Scannez vos articles · payez à la sortie</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-white font-bold text-base leading-tight">Scan & Go</h1>
+          <p className="text-white/40 text-xs mt-0.5 font-medium">Scannez vos articles · payez à la sortie</p>
         </div>
         {itemCount > 0 && (
           <div
             className="flex items-center gap-2 px-3 py-1.5 rounded-full flex-shrink-0"
-            style={{ background: "var(--color-action)" }}
+            style={{ background: "var(--p-500)" }}
           >
-            <ShoppingCart size={14} className="text-white" />
-            <span className="text-white text-xs font-black">{itemCount}</span>
+            <ScanLine size={13} className="text-white" strokeWidth={1.8} />
+            <span className="text-white text-xs font-bold">{itemCount}</span>
           </div>
         )}
       </div>
 
       {/* ── Zone caméra ── */}
       <div
-        className="relative mx-4 rounded-3xl overflow-hidden"
-        style={{ aspectRatio: "4/3", background: "#000" }}
+        className="relative mx-4 overflow-hidden"
+        style={{ borderRadius: 20, aspectRatio: "4/3", background: "#000" }}
       >
-        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+          style={{ opacity: isScanning ? 1 : 0 }}
+        />
 
-        {/* Viseur */}
+        {/* Viseur ultra-fin 1px blanc */}
         {isScanning && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-56 h-32 relative">
-              {/* Coins du viseur */}
-              <div className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-white rounded-tl-lg" />
-              <div className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-white rounded-tr-lg" />
-              <div className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-white rounded-bl-lg" />
-              <div className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-white rounded-br-lg" />
-              {/* Ligne de scan */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* Overlay sombre autour du cadre */}
+            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.35)" }} />
+            <div
+              className="relative z-10"
+              style={{ width: 220, height: 140 }}
+            >
+              {/* Zone transparente au centre */}
               <div
-                className="absolute inset-x-4 top-1/2 h-0.5 -translate-y-1/2 rounded-full"
-                style={{ background: "var(--color-action)", opacity: 0.85, animation: "pulse 1.2s ease-in-out infinite" }}
+                className="absolute inset-0"
+                style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.35)", borderRadius: 4 }}
+              />
+              {/* Coins 1px */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t border-l border-white" style={{ borderRadius: "3px 0 0 0" }} />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t border-r border-white" style={{ borderRadius: "0 3px 0 0" }} />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-white" style={{ borderRadius: "0 0 0 3px" }} />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-white" style={{ borderRadius: "0 0 3px 0" }} />
+              {/* Ligne de scan fine 1px */}
+              <div
+                className="absolute inset-x-8 top-1/2 -translate-y-1/2"
+                style={{ height: 1, background: "rgba(255,255,255,0.60)", animation: "pulse 1.4s ease-in-out infinite" }}
               />
             </div>
+            {/* Spinner lookup */}
             {lookupMutation.isPending && (
               <div
-                className="absolute top-3 right-3 w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: "var(--color-action) transparent transparent transparent" }}
+                className="absolute top-3 right-3 w-6 h-6 rounded-full border border-t-transparent animate-spin"
+                style={{ borderColor: "rgba(255,255,255,0.5) transparent transparent transparent" }}
               />
             )}
           </div>
         )}
 
+        {/* Idle state */}
         {!isScanning && !cameraError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.08)" }}
-            >
-              <Camera size={32} className="text-white/40" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <ScanLine size={28} className="text-white/30" strokeWidth={1.2} />
             </div>
-            <p className="text-white/40 text-sm">Caméra désactivée</p>
+            <p className="text-white/30 text-xs font-medium">Caméra inactive</p>
           </div>
         )}
 
+        {/* Erreur caméra */}
         {cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 gap-3">
-            <CameraOff size={32} className="text-white/40" />
-            <p className="text-white/70 text-sm text-center leading-relaxed">{cameraError}</p>
+            <CameraOff size={28} className="text-white/30" strokeWidth={1.2} />
+            <p className="text-white/50 text-sm text-center leading-relaxed">{cameraError}</p>
           </div>
         )}
       </div>
 
-      {/* ── Bouton démarrer/arrêter ── */}
+      {/* ── Bouton Démarrer / Arrêter ── */}
       <div className="px-4 mt-3">
         {!isScanning ? (
           <button
             onClick={startCamera}
-            className="w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            style={{ background: "var(--color-action)", boxShadow: "0 6px 20px rgba(255,107,0,0.40)" }}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            style={{ background: "var(--p-500)", boxShadow: "0 4px 16px rgba(34,87,255,0.30)" }}
           >
-            <Scan size={20} />
+            <ScanLine size={17} strokeWidth={1.8} />
             Démarrer le scan
           </button>
         ) : (
           <button
             onClick={stopCamera}
-            className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            style={{ background: "rgba(255,255,255,0.10)", color: "white" }}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.10)" }}
           >
-            <X size={20} />
-            Arrêter le scan
+            Pause
           </button>
         )}
       </div>
 
       {/* ── Saisie manuelle ── */}
-      <form onSubmit={handleManualBarcode} className="px-4 mt-3 flex gap-2">
+      <form onSubmit={handleManualBarcode} className="px-4 mt-2.5 flex gap-2">
         <input
           type="text"
           inputMode="numeric"
           placeholder="Code-barres manuel…"
           value={lookupCode}
           onChange={(e) => setLookupCode(e.target.value)}
-          className="flex-1 py-3 px-4 rounded-xl outline-none font-mono text-sm"
+          className="flex-1 py-2.5 px-4 rounded-xl outline-none font-mono text-sm"
           style={{
-            background: "rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.06)",
             color: "white",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.10)",
           }}
         />
         <button
           type="submit"
           disabled={!lookupCode.trim() || lookupMutation.isPending}
-          className="px-5 py-3 rounded-xl font-black text-white disabled:opacity-40 transition-opacity"
-          style={{ background: "var(--s-600)" }}
+          className="px-5 py-2.5 rounded-xl font-semibold text-sm text-white disabled:opacity-40 transition-opacity"
+          style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.12)" }}
         >
           OK
         </button>
@@ -287,88 +298,87 @@ export default function ScanGoPage() {
       {/* ── Panier scanné ── */}
       {items.length > 0 && (
         <div
-          className="flex-1 mx-4 mt-4 rounded-3xl overflow-hidden"
+          className="mx-4 mt-3 rounded-2xl overflow-hidden"
           style={{ background: "#FFFFFF" }}
         >
-          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--bd)" }}>
-            <h2 className="font-black text-sm" style={{ color: "var(--tx-head)" }}>
-              Panier · {itemCount} article{itemCount > 1 ? "s" : ""}
-            </h2>
-            <span className="text-sm font-black" style={{ color: "var(--tx-head)" }}>
+          {/* En-tête panier */}
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: "1px solid var(--bd)" }}
+          >
+            <p className="font-semibold text-sm" style={{ color: "#0F172A" }}>
+              Panier · <span className="font-bold">{itemCount} article{itemCount > 1 ? "s" : ""}</span>
+            </p>
+            <span className="text-sm font-bold" style={{ color: "#0F172A" }}>
               {total.toLocaleString("fr-FR")} FCFA
             </span>
           </div>
 
-          <div className="divide-y" style={{ borderColor: "var(--bg-layout)" }}>
-            {items.map((item) => (
-              <div key={item.productId} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate" style={{ color: "var(--tx-head)" }}>
-                    {item.productName}
-                  </p>
-                  <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tx-muted)" }}>
-                    {item.barcode}
-                  </p>
-                </div>
+          {/* Lignes articles */}
+          {items.map((item, idx) => (
+            <div
+              key={item.productId}
+              className="flex items-center gap-3 px-4 py-3"
+              style={{ borderBottom: idx < items.length - 1 ? "1px solid var(--bg-layout)" : "none" }}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate" style={{ color: "#0F172A" }}>{item.productName}</p>
+                <p className="text-xs font-mono mt-0.5" style={{ color: "#94A3B8" }}>{item.barcode}</p>
+              </div>
 
-                {/* Quantité */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => updateQty(item.productId, -1)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--n-100)", border: "1px solid var(--bd)" }}
-                  >
-                    <Minus size={12} style={{ color: "var(--tx-muted)" }} />
-                  </button>
-                  <span className="w-6 text-center font-black text-sm" style={{ color: "var(--tx-head)" }}>
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQty(item.productId, 1)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--tx-head)" }}
-                  >
-                    <Plus size={12} className="text-white" />
-                  </button>
-                </div>
-
-                <p className="w-20 text-right font-black text-sm flex-shrink-0" style={{ color: "var(--tx-head)" }}>
-                  {(item.unitPrice * item.quantity).toLocaleString("fr-FR")} F
-                </p>
-
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
-                  onClick={() => setItems((prev) => prev.filter((i) => i.productId !== item.productId))}
-                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: "#FEF2F2" }}
+                  onClick={() => updateQty(item.productId, -1)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: "var(--n-100)" }}
                 >
-                  <Trash2 size={13} style={{ color: "#EF4444" }} />
+                  <Minus size={11} style={{ color: "#64748B" }} />
+                </button>
+                <span className="w-5 text-center font-bold text-sm" style={{ color: "#0F172A" }}>
+                  {item.quantity}
+                </span>
+                <button
+                  onClick={() => updateQty(item.productId, 1)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: "var(--p-500)" }}
+                >
+                  <Plus size={11} className="text-white" />
                 </button>
               </div>
-            ))}
-          </div>
 
-          <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "2px solid var(--bd)" }}>
-            <p className="font-semibold text-sm" style={{ color: "var(--tx-muted)" }}>Total</p>
-            <p className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
-              {total.toLocaleString("fr-FR")} FCFA
-            </p>
-          </div>
+              <p className="w-20 text-right font-bold text-sm flex-shrink-0" style={{ color: "#0F172A" }}>
+                {(item.unitPrice * item.quantity).toLocaleString("fr-FR")} F
+              </p>
+
+              <button
+                onClick={() => setItems((prev) => prev.filter((i) => i.productId !== item.productId))}
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: "#FEF2F2" }}
+              >
+                <Trash2 size={12} style={{ color: "#EF4444" }} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* ── Bouton passer en caisse — Orange Électrique ── */}
+      {/* ── Bouton Passer en caisse ── */}
       {items.length > 0 && (
-        <div className="px-4 pt-3 pb-10">
+        <div className="px-4 pt-3 pb-10 mt-auto">
           <button
-            onClick={convertToOrder}
-            className="w-full py-5 rounded-2xl font-black text-lg text-white flex items-center justify-center gap-3 active:scale-95 transition-transform"
+            onClick={handleCheckout}
+            disabled={submitting}
+            className="w-full py-4 rounded-xl font-semibold text-base text-white flex items-center justify-between px-5 active:scale-[0.98] transition-transform disabled:opacity-60"
             style={{
-              background: "var(--color-action)",
-              boxShadow: "0 8px 28px rgba(255,107,0,0.45)",
+              background: "var(--p-500)",
+              boxShadow: "0 6px 20px rgba(34,87,255,0.28)",
             }}
           >
-            <CheckCircle size={22} />
-            Passer en caisse · {total.toLocaleString("fr-FR")} F
+            <span className="text-sm font-medium text-white/70">
+              {itemCount} article{itemCount > 1 ? "s" : ""}
+            </span>
+            <span>{submitting ? "Création…" : "Passer en caisse"}</span>
+            <span className="font-bold">{total.toLocaleString("fr-FR")} F</span>
           </button>
         </div>
       )}
