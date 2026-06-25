@@ -98,15 +98,42 @@ class Settings(BaseSettings):
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
     SENTRY_PROFILES_SAMPLE_RATE: float = 0.0
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def ensure_asyncpg_driver(cls, v: str) -> str:
+        # Render returns postgres:// or postgresql://, SQLAlchemy async needs postgresql+asyncpg://
+        if v.startswith("postgres://"):
+            return "postgresql+asyncpg://" + v[len("postgres://"):]
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
+
+    @field_validator("REDIS_URL", mode="before")
+    @classmethod
+    def normalize_redis_url(cls, v: str) -> str:
+        # Render Redis URL may not include /0 database suffix — normalize it
+        import re
+        if v and not re.search(r"/\d+$", v):
+            v = v.rstrip("/") + "/0"
+        return v
+
     @field_validator("CELERY_BROKER_URL", mode="before")
     @classmethod
     def set_celery_broker(cls, v: str, info) -> str:
-        return v or info.data.get("REDIS_URL", "").replace("/0", "/1")
+        import re
+        if v:
+            return v
+        redis_url = info.data.get("REDIS_URL", "")
+        return re.sub(r"/\d+$", "/1", redis_url) if redis_url else ""
 
     @field_validator("CELERY_RESULT_BACKEND", mode="before")
     @classmethod
     def set_celery_result(cls, v: str, info) -> str:
-        return v or info.data.get("REDIS_URL", "").replace("/0", "/2")
+        import re
+        if v:
+            return v
+        redis_url = info.data.get("REDIS_URL", "")
+        return re.sub(r"/\d+$", "/2", redis_url) if redis_url else ""
 
     @property
     def is_production(self) -> bool:

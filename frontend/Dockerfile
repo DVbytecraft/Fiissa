@@ -5,6 +5,13 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Build-time env vars for Next.js NEXT_PUBLIC_ inlining
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_APP_NAME=Fiissa
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

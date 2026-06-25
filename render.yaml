@@ -1,0 +1,164 @@
+databases:
+  - name: fiissa-postgres
+    plan: free
+    region: frankfurt
+    databaseName: fiissa_db
+    user: fiissa
+    postgresMajorVersion: "16"
+
+services:
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  - type: redis
+    name: fiissa-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []
+
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: fiissa-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    repo: https://github.com/DVbytecraft/Fiissa
+    branch: main
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fiissa-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: fiissa-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: Fiissa
+      - key: APP_URL
+        value: https://fiissa-frontend.onrender.com
+      - key: API_URL
+        value: https://fiissa-api.onrender.com
+      - key: CORS_ORIGINS
+        value: https://fiissa-frontend.onrender.com
+      - key: ALLOWED_HOSTS
+        value: "fiissa-api.onrender.com,localhost"
+      - key: STORAGE_BACKEND
+        value: local
+      - key: EMAIL_PROVIDER
+        value: mock
+      - key: EMAIL_FROM
+        value: noreply@fiissa.app
+      - key: EMAIL_FROM_NAME
+        value: Fiissa
+      - key: SMS_PROVIDER
+        value: mock
+      - key: SUPERADMIN_EMAIL
+        value: admin@fiissa.app
+      - key: SUPERADMIN_PASSWORD
+        generateValue: true
+      - key: SUPERADMIN_PHONE
+        value: "+221000000000"
+      - key: PAYMENT_MANUAL_TIMEOUT_MINUTES
+        value: "30"
+      - key: PAYMENT_MANUAL_REMINDER_MINUTES
+        value: "15"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "30"
+      - key: ALGORITHM
+        value: HS256
+      - key: SENTRY_DSN
+        value: ""
+      - key: FEDAPAY_API_KEY
+        value: ""
+      - key: BREVO_API_KEY
+        value: ""
+
+  # ── Celery Worker ────────────────────────────────────────────────────────────
+  - type: worker
+    name: fiissa-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A workers.celery_app worker --loglevel=info --concurrency=2
+    repo: https://github.com/DVbytecraft/Fiissa
+    branch: main
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fiissa-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: fiissa-redis
+          property: connectionString
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: fiissa-api
+          envVarKey: SECRET_KEY
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: Fiissa
+      - key: APP_URL
+        value: https://fiissa-frontend.onrender.com
+      - key: API_URL
+        value: https://fiissa-api.onrender.com
+      - key: STORAGE_BACKEND
+        value: local
+      - key: EMAIL_PROVIDER
+        value: mock
+      - key: EMAIL_FROM
+        value: noreply@fiissa.app
+      - key: EMAIL_FROM_NAME
+        value: Fiissa
+      - key: SMS_PROVIDER
+        value: mock
+      - key: PAYMENT_MANUAL_TIMEOUT_MINUTES
+        value: "30"
+      - key: FEDAPAY_API_KEY
+        value: ""
+      - key: BREVO_API_KEY
+        value: ""
+
+  # ── Frontend Next.js ─────────────────────────────────────────────────────────
+  - type: web
+    name: fiissa-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    repo: https://github.com/DVbytecraft/Fiissa
+    branch: main
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://fiissa-api.onrender.com
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://fiissa-frontend.onrender.com
+      - key: NEXT_PUBLIC_APP_NAME
+        value: Fiissa
