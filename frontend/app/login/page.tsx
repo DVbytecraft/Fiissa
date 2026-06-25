@@ -114,31 +114,15 @@ function LoginPageContent() {
       >
         <div className="w-full max-w-sm flex flex-col items-center text-center">
 
-          {/* Logo */}
+          {/* Logo app complet — fond sombre intégré */}
           <Image
-            src="/icons/icon-512x512.png"
+            src="/icons/2.png"
             alt="Fiissa"
-            width={80}
-            height={80}
-            className="rounded-2xl"
+            width={200}
+            height={200}
+            className="rounded-3xl"
             priority
           />
-
-          {/* Wordmark */}
-          <p
-            className="mt-4 text-4xl font-bold tracking-tight"
-            style={{ color: "#FFFFFF", letterSpacing: "-0.02em" }}
-          >
-            fiissa
-          </p>
-
-          {/* Slogan */}
-          <p
-            className="mt-1 text-xs font-medium tracking-[0.18em] uppercase"
-            style={{ color: "#00D68F" }}
-          >
-            Shop faster. Live better.
-          </p>
 
           {/* Divider */}
           <div className="mt-10 w-12 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
@@ -170,14 +154,14 @@ function LoginPageContent() {
           {/* Logo mobile uniquement */}
           <div className="lg:hidden flex flex-col items-center mb-8">
             <Image
-              src="/icons/icon-512x512.png"
+              src="/icons/1.png"
               alt="Fiissa"
-              width={56}
-              height={56}
-              className="rounded-xl"
+              width={72}
+              height={72}
+              className="rounded-2xl"
               priority
             />
-            <p className="mt-2 text-xl font-bold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
+            <p className="mt-2 text-xl font-semibold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
             <p className="text-[10px] font-medium tracking-[0.16em] uppercase mt-0.5" style={{ color: "#94A3B8" }}>
               Shop faster. Live better.
             </p>
