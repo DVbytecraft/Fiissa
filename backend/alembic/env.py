@@ -1,5 +1,5 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 from alembic import context
 
 # Import tous les modèles pour que Alembic les détecte
@@ -50,6 +50,21 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
         connect_args={"sslmode": "disable"},
     )
+
+    # Alembic creates alembic_version with version_num VARCHAR(32) by default.
+    # Our revision IDs (e.g. "0007_merchant_onboarding_idempotency") exceed 32 chars,
+    # so we pre-create or widen the column to VARCHAR(255) before running migrations.
+    with connectable.connect() as pre_conn:
+        pre_conn.execute(text(
+            "CREATE TABLE IF NOT EXISTS alembic_version"
+            " (version_num VARCHAR(255) NOT NULL,"
+            " CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+        ))
+        pre_conn.execute(text(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+        ))
+        pre_conn.commit()
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
