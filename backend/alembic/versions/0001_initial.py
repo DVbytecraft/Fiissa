@@ -15,6 +15,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Enable uuid-ossp so uuid_generate_v4() is available as a column default
+    op.execute(sa.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+
     # ── users ──────────────────────────────────────────────────────────────────
     op.create_table(
         "users",
