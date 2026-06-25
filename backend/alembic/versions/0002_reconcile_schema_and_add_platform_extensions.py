@@ -236,7 +236,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "plans"):
         op.create_table(
             "plans",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("code", sa.String(50), nullable=False),
             sa.Column("name", sa.String(150), nullable=False),
             sa.Column("billing_cycle", sa.String(30), nullable=False, server_default="monthly"),
@@ -253,7 +253,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "company_settings"):
         op.create_table(
             "company_settings",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("currency", sa.String(5), nullable=False, server_default="XOF"),
             sa.Column("timezone", sa.String(60), nullable=False, server_default="Africa/Dakar"),
@@ -273,7 +273,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "feature_flags"):
         op.create_table(
             "feature_flags",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("key", sa.String(100), nullable=False),
             sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
@@ -288,7 +288,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "subscription_invoices"):
         op.create_table(
             "subscription_invoices",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("subscription_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("invoice_number", sa.String(80), nullable=False),
@@ -309,7 +309,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "subscription_renewals"):
         op.create_table(
             "subscription_renewals",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("subscription_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("previous_period_end", sa.DateTime(timezone=True), nullable=True),
@@ -326,7 +326,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "product_history"):
         op.create_table(
             "product_history",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("product_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("changed_by_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -343,7 +343,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "notification_templates"):
         op.create_table(
             "notification_templates",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("event_key", sa.String(100), nullable=False),
             sa.Column("channel", sa.String(20), nullable=False, server_default="in_app"),
@@ -358,7 +358,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "notification_events"):
         op.create_table(
             "notification_events",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("event_key", sa.String(100), nullable=False),
             sa.Column("resource_type", sa.String(100), nullable=True),
@@ -373,7 +373,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "support_tickets"):
         op.create_table(
             "support_tickets",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("customer_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("assigned_to_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -392,7 +392,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "support_messages"):
         op.create_table(
             "support_messages",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("ticket_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("sender_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("body", sa.Text(), nullable=False),
@@ -406,7 +406,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "support_attachments"):
         op.create_table(
             "support_attachments",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("message_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("file_name", sa.String(255), nullable=False),
             sa.Column("storage_key", sa.Text(), nullable=False),
@@ -420,7 +420,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "api_integrations"):
         op.create_table(
             "api_integrations",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("name", sa.String(150), nullable=False, server_default="catalog_api"),
             sa.Column("integration_type", sa.String(30), nullable=False, server_default="catalog"),
@@ -453,7 +453,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "api_credentials"):
         op.create_table(
             "api_credentials",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("integration_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("credential_type", sa.String(30), nullable=False, server_default="api_key"),
             sa.Column("key_name", sa.String(100), nullable=True),
@@ -471,7 +471,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "api_call_logs"):
         op.create_table(
             "api_call_logs",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("integration_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("barcode", sa.String(120), nullable=True),
@@ -489,7 +489,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "external_product_cache"):
         op.create_table(
             "external_product_cache",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("integration_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("barcode", sa.String(120), nullable=False),
@@ -504,7 +504,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "catalog_sources"):
         op.create_table(
             "catalog_sources",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("store_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("mode", sa.String(30), nullable=False, server_default="internal"),
@@ -521,7 +521,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "catalog_import_jobs"):
         op.create_table(
             "catalog_import_jobs",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("store_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -544,7 +544,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "catalog_import_errors"):
         op.create_table(
             "catalog_import_errors",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("job_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("row_number", sa.Integer(), nullable=False),
             sa.Column("field_name", sa.String(100), nullable=True),
@@ -558,7 +558,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "product_sync_jobs"):
         op.create_table(
             "product_sync_jobs",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("integration_id", postgresql.UUID(as_uuid=True), nullable=True),
             sa.Column("status", sa.String(30), nullable=False, server_default="pending"),
@@ -577,7 +577,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "webhook_endpoints"):
         op.create_table(
             "webhook_endpoints",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("name", sa.String(150), nullable=False),
             sa.Column("target_url", sa.Text(), nullable=False),
@@ -594,7 +594,7 @@ def upgrade() -> None:
     if not _has_table(inspector, "webhook_deliveries"):
         op.create_table(
             "webhook_deliveries",
-            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text("gen_random_uuid()")),
             sa.Column("endpoint_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("event_type", sa.String(50), nullable=False),

@@ -36,7 +36,7 @@ def upgrade() -> None:
                 "id",
                 postgresql.UUID(as_uuid=True),
                 nullable=False,
-                server_default=sa.text("uuid_generate_v4()"),
+                server_default=sa.text("gen_random_uuid()"),
             ),
             # Demandeur
             sa.Column("first_name", sa.String(100), nullable=False),

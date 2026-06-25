@@ -1,6 +1,6 @@
 import asyncio
 from logging.config import fileConfig
-from sqlalchemy import pool, text
+from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
@@ -58,10 +58,6 @@ async def run_async_migrations():
         poolclass=pool.NullPool,
     )
     async with connectable.connect() as connection:
-        # Enable uuid-ossp before any migration; commit separately so
-        # it is visible to subsequent DDL even if the migration rolls back.
-        await connection.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
-        await connection.commit()
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 
