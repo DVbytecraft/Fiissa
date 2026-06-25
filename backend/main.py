@@ -102,17 +102,6 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    if settings.DEBUG:
-        import traceback
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "code": "debug_error",
-                "type": type(exc).__name__,
-                "message": str(exc)[:500],
-                "traceback": traceback.format_exc()[-2000:],
-            },
-        )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"code": "internal_error", "message": "Internal server error"},
@@ -182,38 +171,6 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "redis": "connected" if redis_ok else "error",
     }
 
-
-@app.get("/debug/tables", tags=["System"])
-async def debug_tables(db: AsyncSession = Depends(get_db)):
-    """Temporary diagnostic: list all tables in public schema."""
-    result = await db.execute(
-        text("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename")
-    )
-    tables = [row[0] for row in result.fetchall()]
-    return {"tables": tables, "count": len(tables)}
-
-
-@app.get("/debug/migrate", tags=["System"])
-async def debug_migrate():
-    """Temporary diagnostic: run alembic upgrade head and return output."""
-    import subprocess, shutil, os
-    alembic_path = shutil.which("alembic") or "/usr/local/bin/alembic"
-    db_url_masked = settings.DATABASE_URL[:30] + "..." if settings.DATABASE_URL else "NOT SET"
-    db_sync_masked = settings.database_url_sync[:30] + "..." if settings.database_url_sync else "NOT SET"
-    result = subprocess.run(
-        [alembic_path, "upgrade", "head"],
-        capture_output=True, text=True, timeout=120,
-        cwd="/app",
-    )
-    return {
-        "alembic_path": alembic_path,
-        "alembic_exists": os.path.exists(alembic_path),
-        "db_url_async": db_url_masked,
-        "db_url_sync": db_sync_masked,
-        "returncode": result.returncode,
-        "stdout": result.stdout[-3000:],
-        "stderr": result.stderr[-3000:],
-    }
 
 
 @app.get("/", tags=["System"])
