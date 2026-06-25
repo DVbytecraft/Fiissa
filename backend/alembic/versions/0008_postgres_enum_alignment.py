@@ -1,7 +1,7 @@
 """Align PostgreSQL enum types with ORM models for production runtime.
 
-Revision ID: 0007_postgres_enum_alignment
-Revises: 0006_auth_email_otp
+Revision ID: 0008_postgres_enum_alignment
+Revises: 0007_merchant_onboarding_idempotency
 Create Date: 2026-06-24 13:45:00.000000
 """
 
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 
-revision = "0007_postgres_enum_alignment"
-down_revision = "0006_auth_email_otp"
+revision = "0008_postgres_enum_alignment"
+down_revision = "0007_merchant_onboarding_idempotency"
 branch_labels = None
 depends_on = None
 
@@ -29,7 +29,7 @@ ENUM_COLUMNS: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("company_settings", "catalog_mode", "catalog_mode_enum", ("internal", "csv_import", "external_api", "hybrid")),
     ("company_settings", "payment_mode", "payment_mode_enum", ("manual", "gateway", "hybrid")),
     ("company_settings", "delivery_mode", "delivery_mode_enum", ("pickup", "delivery", "hybrid")),
-    ("user_company_roles", "role", "user_role_enum", ("super_admin", "company_owner", "store_manager", "accountant", "preparer", "security_agent", "support_agent", "customer")),
+    ("user_company_roles", "role", "user_role_enum", ("super_admin", "company_owner", "store_manager", "cashier", "accountant", "preparer", "security_agent", "support_agent", "customer")),
     ("products", "source_type", "product_source_type_enum", ("internal", "csv_import", "external_sync")),
     ("stock_movements", "type", "stock_movement_type_enum", ("purchase", "sale", "return", "adjustment", "reservation", "reservation_release", "loss")),
     ("product_history", "change_type", "product_history_type_enum", ("price", "stock", "availability", "metadata")),
