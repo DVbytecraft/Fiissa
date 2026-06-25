@@ -87,22 +87,25 @@ export default function AccountPage() {
         >
           <User size={36} style={{ color: "var(--n-400)" }} />
         </div>
-        <h2 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+        <h2 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
           Mon compte
         </h2>
-        <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
+        <p className="mt-2 text-sm text-center" style={{ color: "var(--tx-muted)" }}>
           Connecte-toi pour accéder à ton compte
         </p>
-        <button className="btn-primary mt-6 max-w-xs" onClick={() => router.push("/login")}>
+        <button
+          onClick={() => router.push("/login")}
+          className="mt-6 flex items-center justify-center gap-2 px-8 py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-all"
+          style={{ background: "#0F172A" }}
+        >
           Se connecter
         </button>
-        <button
-          className="mt-4 text-sm font-bold"
-          style={{ color: "var(--tx-head)" }}
-          onClick={() => router.push("/register")}
-        >
-          Créer un compte gratuit
-        </button>
+        <p className="mt-3 text-xs" style={{ color: "#64748B" }}>
+          Pas encore de compte ?{" "}
+          <a href="/register" className="font-semibold underline" style={{ color: "var(--p-500)" }}>
+            Créer un compte
+          </a>
+        </p>
       </div>
     );
   }
@@ -195,7 +198,7 @@ export default function AccountPage() {
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-black text-xl truncate" style={{ color: "var(--tx-head)" }}>
+            <h2 className="font-semibold text-lg truncate" style={{ color: "var(--tx-head)" }}>
               {user?.firstName} {user?.lastName}
             </h2>
             <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -331,7 +334,7 @@ export default function AccountPage() {
         {/* ── Déconnexion ── */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all active:scale-95"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95"
           style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5" }}
         >
           <LogOut size={18} />

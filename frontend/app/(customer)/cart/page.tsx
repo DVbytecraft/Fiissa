@@ -66,7 +66,7 @@ export default function CartPage() {
         >
           🛒
         </div>
-        <h2 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+        <h2 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
           Panier vide
         </h2>
         <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
@@ -95,7 +95,7 @@ export default function CartPage() {
           <ArrowLeft size={18} style={{ color: "var(--tx-head)" }} />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+          <h1 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
             {step === "cart" ? "Mon panier" : "Mode de récupération"}
           </h1>
           {step === "cart" && (
@@ -132,7 +132,7 @@ export default function CartPage() {
                 <p className="font-bold text-sm truncate" style={{ color: "var(--tx-head)" }}>
                   {item.name}
                 </p>
-                <p className="font-black mt-0.5" style={{ color: "var(--tx-head)" }}>
+                <p className="font-bold mt-0.5 text-sm" style={{ color: "var(--tx-head)" }}>
                   {item.price.toLocaleString("fr-FR")} FCFA
                 </p>
                 {/* Quantité */}
@@ -144,7 +144,7 @@ export default function CartPage() {
                   >
                     <Minus size={14} />
                   </button>
-                  <span className="w-7 text-center font-black text-sm" style={{ color: "var(--tx-head)" }}>
+                  <span className="w-7 text-center font-bold text-sm" style={{ color: "var(--tx-head)" }}>
                     {item.quantity}
                   </span>
                   <button
@@ -159,7 +159,7 @@ export default function CartPage() {
 
               {/* Total ligne + supprimer */}
               <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                <p className="font-black text-sm" style={{ color: "var(--tx-head)" }}>
+                <p className="font-bold text-sm" style={{ color: "var(--tx-head)" }}>
                   {(item.price * item.quantity).toLocaleString("fr-FR")} F
                 </p>
                 <button
@@ -183,7 +183,7 @@ export default function CartPage() {
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
             <div
-              className="flex justify-between font-black text-lg pt-2"
+              className="flex justify-between font-semibold text-sm pt-2"
               style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}
             >
               <span>Total</span>
@@ -305,7 +305,7 @@ export default function CartPage() {
             className="rounded-2xl p-4"
             style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
           >
-            <div className="flex justify-between font-black text-lg" style={{ color: "var(--tx-head)" }}>
+            <div className="flex justify-between font-semibold text-sm" style={{ color: "var(--tx-head)" }}>
               <span>Total à payer</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>

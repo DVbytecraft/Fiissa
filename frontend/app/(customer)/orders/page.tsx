@@ -27,13 +27,17 @@ export default function OrdersPage() {
         >
           <Package size={36} style={{ color: "var(--n-400)" }} />
         </div>
-        <h2 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+        <h2 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
           Mes commandes
         </h2>
-        <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
+        <p className="mt-2 text-sm text-center" style={{ color: "var(--tx-muted)" }}>
           Connecte-toi pour voir tes commandes
         </p>
-        <button className="btn-primary mt-6 max-w-xs" onClick={() => router.push("/login")}>
+        <button
+          onClick={() => router.push("/login")}
+          className="mt-6 flex items-center justify-center gap-2 px-8 py-2.5 rounded-lg text-sm font-semibold text-white active:scale-95 transition-all"
+          style={{ background: "#0F172A" }}
+        >
           Se connecter
         </button>
       </div>
@@ -50,7 +54,7 @@ export default function OrdersPage() {
         className="px-5 py-4"
         style={{ background: "#FFFFFF", borderBottom: "1px solid var(--bd)" }}
       >
-        <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>Mes commandes</h1>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Mes commandes</h1>
       </div>
 
       <div className="px-5 py-4 pb-6 space-y-3">
@@ -69,7 +73,7 @@ export default function OrdersPage() {
             <p className="text-sm mt-1" style={{ color: "var(--tx-muted)" }}>
               Tes futures commandes apparaîtront ici
             </p>
-            <Link href="/" className="inline-block mt-4 text-sm font-bold" style={{ color: "var(--color-action)" }}>
+            <Link href="/" className="inline-block mt-4 text-sm font-bold" style={{ color: "var(--p-500)" }}>
               Commencer à commander →
             </Link>
           </div>
@@ -84,7 +88,7 @@ export default function OrdersPage() {
               {/* Ligne principale */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-black" style={{ color: "var(--tx-head)" }}>
+                  <p className="font-bold" style={{ color: "var(--tx-head)" }}>
                     {order.order_number}
                   </p>
                   <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -94,7 +98,7 @@ export default function OrdersPage() {
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-black" style={{ color: "var(--tx-head)" }}>
+                  <p className="font-bold" style={{ color: "var(--tx-head)" }}>
                     {order.total_xof?.toLocaleString("fr-FR")} FCFA
                   </p>
                   <div className="mt-1">

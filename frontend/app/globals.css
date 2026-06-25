@@ -140,10 +140,10 @@
   }
   .btn-action:not(:disabled):hover { background: var(--color-action-dark); }
 
-  /* ── Bouton primaire Bleu Fiissa — portail marchand ──────────── */
+  /* ── Bouton primaire Bleu Fiissa ─────────────────────────────── */
   .btn-primary {
-    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-bold text-base text-white;
+    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
+    @apply rounded-xl font-semibold text-sm text-white;
     @apply transition-all duration-150 active:scale-95 select-none;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--p-500);
@@ -153,8 +153,8 @@
 
   /* ── Bouton vert succès ──────────────────────────────────────── */
   .btn-success {
-    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-bold text-base text-white;
+    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
+    @apply rounded-xl font-semibold text-sm text-white;
     @apply transition-all duration-150 active:scale-95 select-none;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--s-500);
@@ -164,8 +164,8 @@
 
   /* ── Bouton secondaire outline noir ─────────────────────────── */
   .btn-secondary {
-    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-semibold text-base border-2;
+    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
+    @apply rounded-xl font-semibold text-sm border;
     @apply transition-all duration-150 active:scale-95 select-none;
     background: var(--n-0);
     color: var(--tx-head);
@@ -175,17 +175,17 @@
 
   /* ── Bouton danger ───────────────────────────────────────────── */
   .btn-danger {
-    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-semibold text-base border;
+    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
+    @apply rounded-xl font-semibold text-sm border;
     @apply transition-all duration-150 active:scale-95 select-none;
     background: var(--error-bg);
     color: var(--error);
     border-color: #FCA5A5;
   }
 
-  /* ── Input mobile grand, accessible ─────────────────────────── */
+  /* ── Input mobile épuré ──────────────────────────────────────── */
   .input-mobile {
-    @apply w-full py-4 px-4 text-base outline-none transition-all;
+    @apply w-full py-3 px-4 text-sm outline-none transition-all;
     background: var(--n-50);
     border: 1.5px solid var(--bd);
     border-radius: var(--r-xl);
