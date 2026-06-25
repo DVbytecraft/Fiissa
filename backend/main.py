@@ -183,6 +183,16 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     }
 
 
+@app.get("/debug/tables", tags=["System"])
+async def debug_tables(db: AsyncSession = Depends(get_db)):
+    """Temporary diagnostic: list all tables in public schema."""
+    result = await db.execute(
+        text("SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename")
+    )
+    tables = [row[0] for row in result.fetchall()]
+    return {"tables": tables, "count": len(tables)}
+
+
 @app.get("/", tags=["System"])
 async def root():
     return {"message": "Fiissa API", "docs": "/docs"}
