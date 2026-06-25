@@ -43,10 +43,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    # sslmode=disable avoids psycopg2 SSL-handshake hang on Render internal network.
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"sslmode": "disable"},
     )
     with connectable.connect() as connection:
         context.configure(
