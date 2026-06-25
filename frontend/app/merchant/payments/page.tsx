@@ -33,6 +33,8 @@ function PaymentCard({ payment, onAction }: { payment: any; onAction: () => void
   });
 
   const operatorLabels: Record<string, string> = {
+    tmoney: "T-Money",
+    flooz: "Flooz",
     wave: "Wave",
     orange_money: "Orange Money",
     mtn_momo: "MTN MoMo",

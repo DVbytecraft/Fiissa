@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, MapPin, Store, Truck } from "lucide-react";
+import { ArrowLeft, MapPin, Minus, Plus, Store, Trash2, Truck } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useCartStore, useAuthStore } from "@/lib/store";
 import { ordersApi } from "@/lib/api";
@@ -12,11 +12,12 @@ type DeliveryType = "click_collect" | "delivery";
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, removeItem, updateQuantity, clearCart, storeId, companyId, total, itemCount } = useCartStore();
+  const { items, removeItem, updateQuantity, clearCart, storeId, companyId, total, itemCount } =
+    useCartStore();
   const { isAuthenticated } = useAuthStore();
-  const [step, setStep] = useState<"cart" | "delivery">("cart");
-  const [deliveryType, setDeliveryType] = useState<DeliveryType>("click_collect");
-  const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "" });
+  const [step, setStep]                     = useState<"cart" | "delivery">("cart");
+  const [deliveryType, setDeliveryType]     = useState<DeliveryType>("click_collect");
+  const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "", landmark: "" });
 
   const createOrderMutation = useMutation({
     mutationFn: () =>
@@ -44,20 +45,30 @@ export default function CartPage() {
       setStep("delivery");
     } else {
       if (deliveryType === "delivery" && !deliveryAddress.street) {
-        toast.error("Veuillez saisir votre adresse de livraison");
+        toast.error("Saisis ton adresse de livraison");
         return;
       }
       createOrderMutation.mutate();
     }
   };
 
+  /* ── Panier vide ── */
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
-        <span className="text-6xl mb-4">🛒</span>
-        <h2 className="text-xl font-bold" style={{ color: "var(--tx-head)" }}>Votre panier est vide</h2>
-        <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>Ajoutez des produits depuis un commerce</p>
-        <button onClick={() => router.push("/")} className="mt-6 btn-primary max-w-xs">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] px-6">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mb-5 text-4xl"
+          style={{ background: "var(--n-100)" }}
+        >
+          🛒
+        </div>
+        <h2 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+          Panier vide
+        </h2>
+        <p className="mt-2 text-center" style={{ color: "var(--tx-muted)" }}>
+          Ajoute des produits depuis un commerce
+        </p>
+        <button onClick={() => router.push("/")} className="btn-action mt-6 max-w-xs">
           Découvrir les commerces
         </button>
       </div>
@@ -65,138 +76,195 @@ export default function CartPage() {
   }
 
   return (
-    <div style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
-      {/* Header */}
-      <div className="px-4 pt-4 pb-4 flex items-center" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }}>
-        <button onClick={() => step === "cart" ? router.back() : setStep("cart")} className="mr-3">
-          <ArrowLeft size={22} style={{ color: "var(--tx-head)" }} />
+    <div style={{ background: "var(--bg-layout)", minHeight: "100vh" }}>
+
+      {/* ── Header ── */}
+      <div
+        className="px-5 py-4 flex items-center gap-3"
+        style={{ background: "#FFFFFF", borderBottom: "1px solid var(--bd)" }}
+      >
+        <button
+          onClick={() => (step === "cart" ? router.back() : setStep("cart"))}
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+          style={{ background: "var(--n-100)" }}
+        >
+          <ArrowLeft size={18} style={{ color: "var(--tx-head)" }} />
         </button>
-        <h1 className="text-xl font-bold" style={{ color: "var(--tx-head)" }}>
-          {step === "cart" ? "Mon panier" : "Mode de récupération"}
-        </h1>
+        <div className="flex-1">
+          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+            {step === "cart" ? "Mon panier" : "Mode de récupération"}
+          </h1>
+          {step === "cart" && (
+            <p className="text-sm" style={{ color: "var(--tx-muted)" }}>
+              {itemCount()} article{itemCount() > 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
       </div>
 
+      {/* ── Étape 1 : Articles ── */}
       {step === "cart" && (
-        <>
-          <div className="px-4 py-4 space-y-3">
-            {items.map((item) => (
-              <div key={item.productId} className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl" style={{ background: "var(--bg-app)" }}>🛒</div>
-                )}
-                <div className="flex-1">
-                  <p className="font-semibold text-sm" style={{ color: "var(--tx-head)" }}>{item.name}</p>
-                  <p className="font-bold mt-1" style={{ color: "var(--p-500)" }}>
-                    {item.price.toLocaleString("fr-FR")} FCFA
-                  </p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold"
-                      style={{ background: "var(--bg-app)", color: "var(--tx-body)" }}
-                    >
-                      −
-                    </button>
-                    <span className="font-bold w-6 text-center" style={{ color: "var(--tx-head)" }}>{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold"
-                      style={{ background: "var(--p-500)" }}
-                    >
-                      +
-                    </button>
-                  </div>
+        <div className="px-5 py-4 space-y-3">
+          {items.map((item) => (
+            <div
+              key={item.productId}
+              className="flex items-center gap-3 p-4 rounded-2xl"
+              style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+            >
+              {/* Miniature */}
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+              ) : (
+                <div
+                  className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background: "var(--n-100)" }}
+                >
+                  🛒
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-sm" style={{ color: "var(--tx-head)" }}>
-                    {(item.price * item.quantity).toLocaleString("fr-FR")} FCFA
-                  </p>
+              )}
+
+              {/* Infos */}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate" style={{ color: "var(--tx-head)" }}>
+                  {item.name}
+                </p>
+                <p className="font-black mt-0.5" style={{ color: "var(--tx-head)" }}>
+                  {item.price.toLocaleString("fr-FR")} FCFA
+                </p>
+                {/* Quantité */}
+                <div className="flex items-center gap-2 mt-2">
                   <button
-                    onClick={() => removeItem(item.productId)}
-                    className="mt-2 active:opacity-70"
-                    style={{ color: "#EF4444" }}
+                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg transition-colors"
+                    style={{ background: "var(--n-100)", color: "var(--tx-head)" }}
                   >
-                    <Trash2 size={16} />
+                    <Minus size={14} />
+                  </button>
+                  <span className="w-7 text-center font-black text-sm" style={{ color: "var(--tx-head)" }}>
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-colors"
+                    style={{ background: "var(--tx-head)" }}
+                  >
+                    <Plus size={14} />
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Résumé */}
-          <div className="mx-4 rounded-2xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <div className="flex justify-between text-sm" style={{ color: "var(--tx-muted)" }}>
-              <span>Sous-total ({itemCount()} articles)</span>
+              {/* Total ligne + supprimer */}
+              <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                <p className="font-black text-sm" style={{ color: "var(--tx-head)" }}>
+                  {(item.price * item.quantity).toLocaleString("fr-FR")} F
+                </p>
+                <button
+                  onClick={() => removeItem(item.productId)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                  style={{ background: "#FEF2F2" }}
+                >
+                  <Trash2 size={14} style={{ color: "#EF4444" }} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Récapitulatif */}
+          <div
+            className="rounded-2xl p-4 mt-2"
+            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+          >
+            <div className="flex justify-between text-sm mb-2" style={{ color: "var(--tx-muted)" }}>
+              <span>Sous-total</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
-            <div className="flex justify-between font-bold text-lg mt-2 pt-2" style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}>
+            <div
+              className="flex justify-between font-black text-lg pt-2"
+              style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}
+            >
               <span>Total</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
-        </>
+        </div>
       )}
 
+      {/* ── Étape 2 : Livraison ── */}
       {step === "delivery" && (
-        <div className="px-4 py-6 space-y-4">
+        <div className="px-5 py-5 space-y-4">
+          {/* Options */}
           {[
             {
               type: "click_collect" as DeliveryType,
               icon: Store,
               title: "Retrait en magasin",
-              desc: "Commandez maintenant, récupérez quand c'est prêt",
+              desc: "Commande maintenant, récupère quand c'est prêt",
               badge: "Gratuit",
             },
             {
               type: "delivery" as DeliveryType,
               icon: Truck,
               title: "Livraison à domicile",
-              desc: "Recevez votre commande chez vous",
+              desc: "Reçois ta commande chez toi",
               badge: "Selon distance",
             },
-          ].map(({ type, icon: Icon, title, desc, badge }) => (
-            <button
-              key={type}
-              onClick={() => setDeliveryType(type)}
-              className="w-full text-left p-4 rounded-2xl transition-all"
-              style={{
-                border: `2px solid ${deliveryType === type ? "var(--p-500)" : "var(--bd)"}`,
-                background: deliveryType === type ? "rgba(34,87,255,0.04)" : "var(--bg-card)",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ background: deliveryType === type ? "var(--p-500)" : "var(--bg-app)" }}
-                >
-                  <Icon size={22} style={{ color: deliveryType === type ? "#fff" : "var(--tx-muted)" }} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold" style={{ color: "var(--tx-head)" }}>{title}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(0,214,143,0.12)", color: "var(--s-500)" }}>{badge}</span>
+          ].map(({ type, icon: Icon, title, desc, badge }) => {
+            const selected = deliveryType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => setDeliveryType(type)}
+                className="w-full text-left p-4 rounded-2xl transition-all active:scale-[0.99]"
+                style={{
+                  border: `2px solid ${selected ? "var(--tx-head)" : "var(--bd)"}`,
+                  background: selected ? "var(--n-50)" : "#FFFFFF",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: selected ? "var(--tx-head)" : "var(--n-100)" }}
+                  >
+                    <Icon size={22} style={{ color: selected ? "white" : "var(--tx-muted)" }} />
                   </div>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>{desc}</p>
-                </div>
-                {deliveryType === type && (
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "var(--p-500)" }}>
-                    <span className="text-white text-sm">✓</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold" style={{ color: "var(--tx-head)" }}>{title}</p>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-bold"
+                        style={{ background: "var(--s-50)", color: "var(--s-700)" }}
+                      >
+                        {badge}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>{desc}</p>
                   </div>
-                )}
-              </div>
-            </button>
-          ))}
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: selected ? "var(--tx-head)" : "var(--n-200)",
+                      border: `2px solid ${selected ? "var(--tx-head)" : "var(--n-300)"}`,
+                    }}
+                  >
+                    {selected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
 
+          {/* Adresse livraison */}
           {deliveryType === "delivery" && (
-            <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin size={18} style={{ color: "var(--p-500)" }} />
-                <h3 className="font-semibold" style={{ color: "var(--tx-head)" }}>Adresse de livraison</h3>
+            <div
+              className="rounded-2xl p-4 space-y-3"
+              style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin size={16} style={{ color: "var(--tx-head)" }} />
+                <h3 className="font-bold" style={{ color: "var(--tx-head)" }}>Adresse de livraison</h3>
               </div>
               <input
-                placeholder="Rue, quartier..."
+                placeholder="Rue, quartier…"
                 value={deliveryAddress.street}
                 onChange={(e) => setDeliveryAddress((a) => ({ ...a, street: e.target.value }))}
                 className="input-mobile"
@@ -207,28 +275,48 @@ export default function CartPage() {
                 onChange={(e) => setDeliveryAddress((a) => ({ ...a, city: e.target.value }))}
                 className="input-mobile"
               />
+              {/* Repère local — champ obligatoire spécification */}
+              <textarea
+                placeholder="Repère local (ex : maison barrière bleue, derrière station Total…)"
+                value={deliveryAddress.landmark}
+                onChange={(e) => setDeliveryAddress((a) => ({ ...a, landmark: e.target.value }))}
+                rows={3}
+                className="input-mobile resize-none"
+                style={{ lineHeight: 1.5 }}
+              />
             </div>
           )}
 
-          <div className="rounded-2xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <div className="flex justify-between font-bold text-lg">
-              <span style={{ color: "var(--tx-head)" }}>Total à payer</span>
-              <span style={{ color: "var(--p-500)" }}>{total().toLocaleString("fr-FR")} FCFA</span>
+          {/* Récapitulatif total */}
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+          >
+            <div className="flex justify-between font-black text-lg" style={{ color: "var(--tx-head)" }}>
+              <span>Total à payer</span>
+              <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bouton action */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 pb-8 pt-4" style={{ background: "var(--bg-app)" }}>
-        <button onClick={handleCheckout} disabled={createOrderMutation.isPending} className="btn-primary">
+      {/* ── Bouton CTA fixe — Orange Électrique ── */}
+      <div
+        className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-4"
+        style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--bd)" }}
+      >
+        <button
+          onClick={handleCheckout}
+          disabled={createOrderMutation.isPending}
+          className="btn-action"
+        >
           {createOrderMutation.isPending ? (
-            <span className="flex items-center justify-center gap-2">
+            <span className="flex items-center gap-2">
               <div className="spinner border-white border-t-transparent" />
-              Création de la commande...
+              Création de la commande…
             </span>
           ) : step === "cart" ? (
-            `Commander — ${total().toLocaleString("fr-FR")} FCFA`
+            `Commander · ${total().toLocaleString("fr-FR")} FCFA`
           ) : (
             "Confirmer et payer"
           )}

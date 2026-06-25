@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, ShoppingBag, CreditCard, Package,
   BarChart2, Settings, LogOut, Receipt, Users, Heart,
-  Puzzle, Star, HelpCircle, X, Menu, Bell, ChevronRight,
+  Puzzle, Star, HelpCircle, X, Menu, Bell, Phone,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 
@@ -26,6 +26,7 @@ const SECONDARY_NAV = [
   { href: "/merchant/employees",     icon: Users,       label: "Équipe"        },
   { href: "/merchant/integrations",  icon: Puzzle,      label: "Intégrations"  },
   { href: "/merchant/subscription",  icon: Star,        label: "Abonnement"    },
+  { href: "/merchant/callcenter",     icon: Phone,       label: "Call Center"   },
   { href: "/merchant/support",       icon: HelpCircle,  label: "Support"       },
   { href: "/merchant/settings",      icon: Settings,    label: "Paramètres"    },
 ];

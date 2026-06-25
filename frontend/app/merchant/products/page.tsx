@@ -530,6 +530,27 @@ export default function MerchantProductsPage() {
           </div>
         </div>
 
+        {/* Import CSV — Bandeau format */}
+        <div
+          className="rounded-2xl px-4 py-3 mb-3 flex items-start gap-3"
+          style={{ background: "var(--n-50)", border: "1px solid var(--bd)" }}
+        >
+          <Upload size={15} style={{ color: "var(--tx-muted)" }} className="flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold" style={{ color: "#111111" }}>Format CSV attendu</p>
+            <p className="text-[11px] font-mono mt-0.5 leading-relaxed break-all" style={{ color: "var(--tx-muted)" }}>
+              code_barres, designation, prix_fcfa, poids_grammes, quantite_stock
+            </p>
+          </div>
+          <button
+            onClick={handleImportCSV}
+            className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold text-white"
+            style={{ background: "#111111" }}
+          >
+            Importer
+          </button>
+        </div>
+
         {/* Alertes stock */}
         {stockAlertCount > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 flex items-center gap-2 mb-3">

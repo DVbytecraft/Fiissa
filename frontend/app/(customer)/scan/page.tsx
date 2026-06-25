@@ -8,7 +8,6 @@ import {
   ChevronLeft, Camera, CameraOff, CheckCircle,
 } from "lucide-react";
 import { catalogApi, ordersApi } from "@/lib/api";
-import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 
 interface ScannedItem {
@@ -21,10 +20,10 @@ interface ScannedItem {
 }
 
 export default function ScanGoPage() {
-  const router   = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef     = useRef<MediaStream | null>(null);
-  const detectorRef   = useRef<any>(null);
+  const router          = useRouter();
+  const videoRef        = useRef<HTMLVideoElement>(null);
+  const streamRef       = useRef<MediaStream | null>(null);
+  const detectorRef     = useRef<any>(null);
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [isScanning, setIsScanning]   = useState(false);
@@ -46,7 +45,7 @@ export default function ScanGoPage() {
     },
     onError: (e: any, barcode) => {
       if (e.response?.status === 404) {
-        toast.error(`Code ${barcode} non trouvé dans le catalogue`);
+        toast.error(`Code ${barcode} introuvable dans ce catalogue`);
       } else {
         toast.error("Erreur réseau — réessayez");
       }
@@ -65,14 +64,23 @@ export default function ScanGoPage() {
       toast.success(`${product.name} ajouté`);
       return [
         ...prev,
-        { productId: product.id, productName: product.name, barcode, unitPrice: product.price_xof, quantity: 1, imageUrl: product.image_url },
+        {
+          productId:   product.id,
+          productName: product.name,
+          barcode,
+          unitPrice:   product.price_xof,
+          quantity:    1,
+          imageUrl:    product.image_url,
+        },
       ];
     });
   };
 
   const updateQty = (productId: string, delta: number) => {
     setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity: i.quantity + delta } : i)).filter((i) => i.quantity > 0)
+      prev
+        .map((i) => (i.productId === productId ? { ...i, quantity: i.quantity + delta } : i))
+        .filter((i) => i.quantity > 0)
     );
   };
 
@@ -101,15 +109,15 @@ export default function ScanGoPage() {
                 lookupMutation.mutate(code);
               }
             }
-          } catch { /* ignore */ }
+          } catch {}
         }, 800);
       } else {
-        setCameraError("BarcodeDetector non supporté. Utilisez la saisie manuelle.");
+        setCameraError("BarcodeDetector non supporté — utilise la saisie manuelle.");
       }
       setIsScanning(true);
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
-        setCameraError("Accès à la caméra refusé. Autorisez-la dans les paramètres.");
+        setCameraError("Accès caméra refusé. Autorise-la dans les paramètres du navigateur.");
       } else {
         setCameraError("Impossible d'accéder à la caméra.");
       }
@@ -132,9 +140,9 @@ export default function ScanGoPage() {
     if (!items.length) return;
     try {
       const res = await ordersApi.createScanGoOrder({
-        store_id: storeId,
+        store_id:   storeId,
         order_type: "scan_go",
-        items: items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+        items:      items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
       });
       stopCamera();
       router.push(`/payment/${res.data.id}`);
@@ -151,25 +159,25 @@ export default function ScanGoPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-dark)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#111111" }}>
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-3 px-4 pt-safe pt-12 pb-4">
+      <div className="flex items-center gap-3 px-5 pt-12 pb-4">
         <button
           onClick={() => { stopCamera(); router.back(); }}
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ background: "rgba(255,255,255,0.12)" }}
+          className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0"
+          style={{ background: "rgba(255,255,255,0.10)" }}
         >
           <ChevronLeft size={20} className="text-white" />
         </button>
         <div className="flex-1">
-          <h1 className="text-white font-black text-lg">Scan & Go</h1>
-          <p className="text-white/50 text-xs">Scannez vos articles · payez à la sortie</p>
+          <h1 className="text-white font-black text-lg leading-tight">Scan & Go</h1>
+          <p className="text-white/50 text-xs mt-0.5">Scannez vos articles · payez à la sortie</p>
         </div>
         {itemCount > 0 && (
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-            style={{ background: "var(--p-500)" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full flex-shrink-0"
+            style={{ background: "var(--color-action)" }}
           >
             <ShoppingCart size={14} className="text-white" />
             <span className="text-white text-xs font-black">{itemCount}</span>
@@ -178,49 +186,63 @@ export default function ScanGoPage() {
       </div>
 
       {/* ── Zone caméra ── */}
-      <div className="relative mx-4 rounded-3xl overflow-hidden" style={{ aspectRatio: "4/3", background: "#000" }}>
+      <div
+        className="relative mx-4 rounded-3xl overflow-hidden"
+        style={{ aspectRatio: "4/3", background: "#000" }}
+      >
         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
 
         {/* Viseur */}
         {isScanning && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-56 h-32 border-2 border-white/60 rounded-xl relative">
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-white rounded-tl-md" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-white rounded-tr-md" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-white rounded-bl-md" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-white rounded-br-md" />
-              <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 animate-pulse" style={{ background: "var(--p-500)" }} />
+            <div className="w-56 h-32 relative">
+              {/* Coins du viseur */}
+              <div className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-white rounded-tl-lg" />
+              <div className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-white rounded-tr-lg" />
+              <div className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-white rounded-bl-lg" />
+              <div className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-white rounded-br-lg" />
+              {/* Ligne de scan */}
+              <div
+                className="absolute inset-x-4 top-1/2 h-0.5 -translate-y-1/2 rounded-full"
+                style={{ background: "var(--color-action)", opacity: 0.85, animation: "pulse 1.2s ease-in-out infinite" }}
+              />
             </div>
             {lookupMutation.isPending && (
-              <div className="absolute top-3 right-3 w-7 h-7 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--p-400) transparent transparent transparent" }} />
+              <div
+                className="absolute top-3 right-3 w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+                style={{ borderColor: "var(--color-action) transparent transparent transparent" }}
+              />
             )}
           </div>
         )}
 
         {!isScanning && !cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
-              <Camera size={32} className="text-white/50" />
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.08)" }}
+            >
+              <Camera size={32} className="text-white/40" />
             </div>
-            <p className="text-white/50 text-sm">Caméra désactivée</p>
+            <p className="text-white/40 text-sm">Caméra désactivée</p>
           </div>
         )}
 
         {cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center px-8 gap-3">
-            <CameraOff size={32} className="text-white/50" />
-            <p className="text-white/70 text-sm text-center leading-6">{cameraError}</p>
+            <CameraOff size={32} className="text-white/40" />
+            <p className="text-white/70 text-sm text-center leading-relaxed">{cameraError}</p>
           </div>
         )}
       </div>
 
-      {/* ── Bouton caméra ── */}
+      {/* ── Bouton démarrer/arrêter ── */}
       <div className="px-4 mt-3">
         {!isScanning ? (
           <button
             onClick={startCamera}
-            className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            style={{ background: "var(--p-500)", boxShadow: "var(--sh-brand)" }}
+            className="w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            style={{ background: "var(--color-action)", boxShadow: "0 6px 20px rgba(255,107,0,0.40)" }}
           >
             <Scan size={20} />
             Démarrer le scan
@@ -229,7 +251,7 @@ export default function ScanGoPage() {
           <button
             onClick={stopCamera}
             className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            style={{ background: "rgba(255,255,255,0.12)", color: "white" }}
+            style={{ background: "rgba(255,255,255,0.10)", color: "white" }}
           >
             <X size={20} />
             Arrêter le scan
@@ -241,12 +263,13 @@ export default function ScanGoPage() {
       <form onSubmit={handleManualBarcode} className="px-4 mt-3 flex gap-2">
         <input
           type="text"
-          placeholder="Saisir un code-barres manuellement"
+          inputMode="numeric"
+          placeholder="Code-barres manuel…"
           value={lookupCode}
           onChange={(e) => setLookupCode(e.target.value)}
           className="flex-1 py-3 px-4 rounded-xl outline-none font-mono text-sm"
           style={{
-            background: "rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.08)",
             color: "white",
             border: "1px solid rgba(255,255,255,0.12)",
           }}
@@ -254,7 +277,7 @@ export default function ScanGoPage() {
         <button
           type="submit"
           disabled={!lookupCode.trim() || lookupMutation.isPending}
-          className="px-5 py-3 rounded-xl font-bold text-white disabled:opacity-40"
+          className="px-5 py-3 rounded-xl font-black text-white disabled:opacity-40 transition-opacity"
           style={{ background: "var(--s-600)" }}
         >
           OK
@@ -264,80 +287,88 @@ export default function ScanGoPage() {
       {/* ── Panier scanné ── */}
       {items.length > 0 && (
         <div
-          className="flex-1 mx-4 mt-4 rounded-3xl p-4 overflow-y-auto"
-          style={{ background: "var(--bg-card)" }}
+          className="flex-1 mx-4 mt-4 rounded-3xl overflow-hidden"
+          style={{ background: "#FFFFFF" }}
         >
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--bd)" }}>
             <h2 className="font-black text-sm" style={{ color: "var(--tx-head)" }}>
-              Mon panier · {itemCount} article{itemCount > 1 ? "s" : ""}
+              Panier · {itemCount} article{itemCount > 1 ? "s" : ""}
             </h2>
-            <span className="text-xs font-bold" style={{ color: "var(--tx-muted)" }}>
+            <span className="text-sm font-black" style={{ color: "var(--tx-head)" }}>
               {total.toLocaleString("fr-FR")} FCFA
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="divide-y" style={{ borderColor: "var(--bg-layout)" }}>
             {items.map((item) => (
-              <div
-                key={item.productId}
-                className="flex items-center gap-3 p-3 rounded-2xl"
-                style={{ background: "var(--bg-app)", border: "1px solid var(--bd)" }}
-              >
+              <div key={item.productId} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: "var(--tx-head)" }}>{item.productName}</p>
-                  <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tx-muted)" }}>{item.barcode}</p>
+                  <p className="font-bold text-sm truncate" style={{ color: "var(--tx-head)" }}>
+                    {item.productName}
+                  </p>
+                  <p className="text-xs font-mono mt-0.5" style={{ color: "var(--tx-muted)" }}>
+                    {item.barcode}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Quantité */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => updateQty(item.productId, -1)}
                     className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
+                    style={{ background: "var(--n-100)", border: "1px solid var(--bd)" }}
                   >
                     <Minus size={12} style={{ color: "var(--tx-muted)" }} />
                   </button>
-                  <span className="w-6 text-center font-black text-sm" style={{ color: "var(--tx-head)" }}>{item.quantity}</span>
+                  <span className="w-6 text-center font-black text-sm" style={{ color: "var(--tx-head)" }}>
+                    {item.quantity}
+                  </span>
                   <button
                     onClick={() => updateQty(item.productId, 1)}
                     className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--p-500)" }}
+                    style={{ background: "var(--tx-head)" }}
                   >
                     <Plus size={12} className="text-white" />
                   </button>
                 </div>
 
-                <p className="w-20 text-right font-bold text-sm shrink-0" style={{ color: "var(--p-500)" }}>
+                <p className="w-20 text-right font-black text-sm flex-shrink-0" style={{ color: "var(--tx-head)" }}>
                   {(item.unitPrice * item.quantity).toLocaleString("fr-FR")} F
                 </p>
 
                 <button
                   onClick={() => setItems((prev) => prev.filter((i) => i.productId !== item.productId))}
-                  className="shrink-0"
-                  style={{ color: "var(--error)" }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: "#FEF2F2" }}
                 >
-                  <Trash2 size={15} />
+                  <Trash2 size={13} style={{ color: "#EF4444" }} />
                 </button>
               </div>
             ))}
           </div>
 
-          <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: "1px solid var(--bd)" }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "2px solid var(--bd)" }}>
             <p className="font-semibold text-sm" style={{ color: "var(--tx-muted)" }}>Total</p>
-            <p className="text-xl font-black" style={{ color: "var(--p-500)" }}>{total.toLocaleString("fr-FR")} FCFA</p>
+            <p className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+              {total.toLocaleString("fr-FR")} FCFA
+            </p>
           </div>
         </div>
       )}
 
-      {/* ── Passer en caisse ── */}
+      {/* ── Bouton passer en caisse — Orange Électrique ── */}
       {items.length > 0 && (
-        <div className="px-4 pt-3 pb-8">
+        <div className="px-4 pt-3 pb-10">
           <button
             onClick={convertToOrder}
             className="w-full py-5 rounded-2xl font-black text-lg text-white flex items-center justify-center gap-3 active:scale-95 transition-transform"
-            style={{ background: "var(--s-600)", boxShadow: "var(--sh-green)" }}
+            style={{
+              background: "var(--color-action)",
+              boxShadow: "0 8px 28px rgba(255,107,0,0.45)",
+            }}
           >
             <CheckCircle size={22} />
-            Passer en caisse — {total.toLocaleString("fr-FR")} F
+            Passer en caisse · {total.toLocaleString("fr-FR")} F
           </button>
         </div>
       )}

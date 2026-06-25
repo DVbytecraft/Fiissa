@@ -404,6 +404,18 @@ export default function OrderDetailPage() {
           )}
         </div>
 
+        {/* ── Bouton picking Préparateur ── */}
+        {["confirmed", "preparing"].includes(order.status) && (
+          <Link
+            href={`/merchant/orders/${orderId}/pick`}
+            className="w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            style={{ background: "var(--color-action)", boxShadow: "0 4px 16px rgba(255,159,0,0.32)" }}
+          >
+            <Package size={20} />
+            Préparer la commande
+          </Link>
+        )}
+
         {/* ── Action principale ── */}
         {nextAction && (
           <button

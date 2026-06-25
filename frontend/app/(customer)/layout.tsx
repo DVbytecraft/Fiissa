@@ -2,73 +2,113 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingBag, Receipt, User, QrCode } from "lucide-react";
+import { Home, Package, Receipt, User, Zap } from "lucide-react";
+import { useCartStore } from "@/lib/store";
 
 const NAV = [
-  { href: "/",         icon: Home,       label: "Accueil"   },
-  { href: "/orders",   icon: ShoppingBag, label: "Commandes" },
-  { href: "/scan",     icon: QrCode,      label: "Scanner",  accent: true },
-  { href: "/receipts", icon: Receipt,     label: "Reçus"     },
-  { href: "/account",  icon: User,        label: "Compte"    },
+  { href: "/",        icon: Home,    label: "Accueil"   },
+  { href: "/orders",  icon: Package, label: "Commandes" },
+  { href: "/scan",    icon: Zap,     label: "Scan & Go", accent: true },
+  { href: "/receipts",icon: Receipt, label: "Reçus"     },
+  { href: "/account", icon: User,    label: "Compte"    },
 ];
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname  = usePathname();
+  const itemCount = useCartStore((s) => s.itemCount());
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-app)" }}>
-      {/* Header */}
+
+      {/* ─── Header glassmorphism ─── */}
       <header
-        className="sticky top-0 z-40 flex items-center justify-between px-5 py-3"
-        style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)", boxShadow: "var(--sh-sm)" }}
+        className="sticky top-0 z-40 flex items-center justify-between px-5"
+        style={{
+          height: 56,
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid var(--bd)",
+        }}
       >
-        <div className="flex items-center gap-2">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: "var(--fiissa-gradient)" }}
           >
             <span className="text-white font-black text-sm">F</span>
           </div>
-          <span className="font-black text-lg" style={{ color: "var(--tx-head)" }}>
+          <span className="font-black text-lg tracking-tight" style={{ color: "var(--tx-head)" }}>
             Fiissa
           </span>
-        </div>
+        </Link>
+
+        {/* Panier — Bleu officiel logo */}
         <Link
           href="/cart"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors"
-          style={{ background: "var(--p-50)", color: "var(--p-600)" }}
+          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-black text-white transition-all active:scale-95"
+          style={{
+            background: "var(--p-500)",
+            boxShadow: "0 4px 12px rgba(34,87,255,0.28)",
+          }}
         >
-          <ShoppingBag size={15} />
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
           Panier
+          {itemCount > 0 && (
+            <span
+              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-black text-white"
+              style={{ background: "#111111" }}
+            >
+              {itemCount > 9 ? "9+" : itemCount}
+            </span>
+          )}
         </Link>
       </header>
 
-      {/* Contenu page */}
+      {/* ─── Contenu ─── */}
       <main className="pb-nav">{children}</main>
 
-      {/* Bottom navigation */}
+      {/* ─── Bottom navigation ─── */}
       <nav className="bottom-nav">
         {NAV.map(({ href, icon: Icon, label, accent }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+          /* Bouton Scan & Go — Jaune Ambré, toujours visible */
           if (accent) {
             return (
-              <Link key={href} href={href} className="nav-item relative" style={{ color: active ? "var(--p-500)" : "var(--tx-muted)" }}>
+              <Link key={href} href={href} className="nav-item">
                 <div
-                  className="-mt-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transition-transform active:scale-95"
-                  style={{ background: active ? "var(--p-500)" : "var(--bg-dark)" }}
+                  className="flex items-center justify-center rounded-2xl transition-all active:scale-90"
+                  style={{
+                    width: 48, height: 48,
+                    marginTop: -18,
+                    background: "var(--color-action)",
+                    boxShadow: "0 6px 18px rgba(255,159,0,0.42)",
+                  }}
                 >
-                  <Icon size={22} strokeWidth={2} className="text-white" />
+                  <Icon size={22} strokeWidth={2.5} className="text-white" />
                 </div>
-                <span className="text-[10px] mt-1">{label}</span>
+                <span
+                  className="text-[10px] mt-0.5 font-bold"
+                  style={{ color: active ? "var(--color-action)" : "var(--tx-muted)" }}
+                >
+                  {label}
+                </span>
               </Link>
             );
           }
 
           return (
-            <Link key={href} href={href} className={`nav-item ${active ? "active" : ""}`}>
+            <Link
+              key={href}
+              href={href}
+              className={`nav-item ${active ? "active" : ""}`}
+            >
               <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-              <span>{label}</span>
+              <span className={active ? "font-bold" : "font-medium"}>{label}</span>
             </Link>
           );
         })}

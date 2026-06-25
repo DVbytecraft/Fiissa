@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { companiesApi, storesApi } from "@/lib/api";
 
 const OPERATORS = [
-  { value: "wave", label: "Wave" },
+  { value: "tmoney",       label: "T-Money" },
+  { value: "flooz",        label: "Flooz" },
+  { value: "wave",         label: "Wave" },
   { value: "orange_money", label: "Orange Money" },
-  { value: "mtn_momo", label: "MTN MoMo" },
-  { value: "moov_money", label: "Moov Money" },
-  { value: "free_money", label: "Free Money" },
+  { value: "mtn_momo",     label: "MTN MoMo" },
+  { value: "moov_money",   label: "Moov Money" },
+  { value: "free_money",   label: "Free Money" },
 ];
 
 const CATALOG_MODES = [

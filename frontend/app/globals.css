@@ -3,58 +3,62 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════
-   FIISSA — Design System v1.0
-   Analyse logo : F vert-émeraude (#00D68F) → bleu-cobalt (#2257FF)
-   Source of truth : logo officiel Fiissa
+   SMARTCHECKOUT — Design System v2.0  "Premium Tech"
+   Palette : Blanc pur · Noir anthracite · Orange Électrique
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Gradients brand ─────────────────────────────────────────── */
+  /* ── Gradient brand (logo Fiissa) ───────────────────────────── */
   --fiissa-gradient:      linear-gradient(135deg, #00D68F 0%, #00B8CC 50%, #2257FF 100%);
   --fiissa-gradient-v:    linear-gradient(180deg,  #00D68F 0%, #2257FF 100%);
   --fiissa-gradient-soft: linear-gradient(135deg,  #E6FBF4 0%, #EBF0FF 100%);
 
-  /* ── Primary — Bleu Fiissa (#2257FF) ─────────────────────────── */
+  /* ── Primary — Bleu Fiissa (portail marchand / admin) ─────── */
   --p-50:  #EBF0FF;
   --p-100: #D6E1FF;
   --p-200: #ADBFFF;
   --p-300: #849EFF;
   --p-400: #5B7CFF;
-  --p-500: #2257FF;   /* couleur principale CTA */
+  --p-500: #2257FF;
   --p-600: #1A44D9;
   --p-700: #1333B3;
   --p-800: #0D238C;
   --p-900: #071466;
 
-  /* ── Secondary — Vert Fiissa (#00D68F) ───────────────────────── */
-  --s-50:  #E6FBF4;
-  --s-100: #CCFAE9;
-  --s-200: #99F5D3;
-  --s-300: #66EFBD;
-  --s-400: #33E9A8;
-  --s-500: #00D68F;   /* succès, validation, brand */
-  --s-600: #00AB72;
-  --s-700: #008056;
-  --s-800: #005639;
-  --s-900: #002B1D;
+  /* ── Action — Jaune Ambré (Scan & Go en magasin) ────────────── */
+  --color-action:     #FF9F00;
+  --color-action-dark:#E08C00;
+  --sh-action:        0 8px 24px rgba(255,159,0,0.30);
 
-  /* ── Neutral — Gris bleutés ──────────────────────────────────── */
+  /* ── Secondary — Vert Fiissa ─────────────────────────────────── */
+  --s-50:  #ECFDF5;
+  --s-100: #D1FAE5;
+  --s-200: #A7F3D0;
+  --s-300: #6EE7B7;
+  --s-400: #34D399;
+  --s-500: #10B981;
+  --s-600: #059669;
+  --s-700: #047857;
+  --s-800: #065F46;
+  --s-900: #064E3B;
+
+  /* ── Neutral ─────────────────────────────────────────────────── */
   --n-0:   #FFFFFF;
-  --n-50:  #F7F9FC;
-  --n-100: #EFF2F8;
-  --n-200: #E1E6F2;
-  --n-300: #C7CFDF;
-  --n-400: #99A4BC;
-  --n-500: #6B7A99;
-  --n-600: #485270;
-  --n-700: #2F3A56;
-  --n-800: #1C2540;
-  --n-900: #0D1227;
+  --n-50:  #F8FAFC;
+  --n-100: #F1F5F9;
+  --n-200: #E2E8F0;
+  --n-300: #CBD5E1;
+  --n-400: #94A3B8;
+  --n-500: #64748B;
+  --n-600: #475569;
+  --n-700: #334155;
+  --n-800: #1E293B;
+  --n-900: #0F172A;
 
   /* ── Statuts ──────────────────────────────────────────────────── */
-  --success:      #00D68F;
-  --success-bg:   #E6FBF4;
-  --success-dark: #005639;
+  --success:      #10B981;
+  --success-bg:   #ECFDF5;
+  --success-dark: #065F46;
   --warning:      #F59E0B;
   --warning-bg:   #FFFBEB;
   --warning-dark: #92400E;
@@ -65,29 +69,31 @@
   --info-bg:      #EBF0FF;
   --info-dark:    #1333B3;
 
-  /* ── App surfaces ─────────────────────────────────────────────── */
-  --bg-app:       #F7F9FC;
-  --bg-card:      #FFFFFF;
-  --bg-dark:      #1C2540;
-  --bg-overlay:   rgba(13,18,39,0.55);
+  /* ── Surfaces ─────────────────────────────────────────────────── */
+  --bg-app:     #FFFFFF;
+  --bg-layout:  #F8FAFC;
+  --bg-card:    #FFFFFF;
+  --bg-dark:    #111111;
+  --bg-overlay: rgba(0,0,0,0.50);
 
   /* ── Texte ────────────────────────────────────────────────────── */
-  --tx-head:    #0D1227;
-  --tx-body:    #2F3A56;
-  --tx-muted:   #99A4BC;
+  --tx-head:    #111111;
+  --tx-body:    #374151;
+  --tx-muted:   #64748B;
   --tx-inverse: #FFFFFF;
 
   /* ── Bordures ─────────────────────────────────────────────────── */
-  --bd:         #E1E6F2;
-  --bd-focus:   #2257FF;
-  --bd-error:   #EF4444;
+  --bd:       #E2E8F0;
+  --bd-focus: #111111;
+  --bd-error: #EF4444;
 
-  /* ── Ombres ───────────────────────────────────────────────────── */
-  --sh-sm:    0 1px 4px rgba(34,87,255,0.06),  0 1px 2px rgba(13,18,39,0.04);
-  --sh-md:    0 4px 16px rgba(34,87,255,0.10), 0 2px 6px rgba(13,18,39,0.06);
-  --sh-lg:    0 8px 32px rgba(34,87,255,0.14), 0 4px 12px rgba(13,18,39,0.08);
+  /* ── Ombres neutres (sans teinte bleue) ─────────────────────── */
+  --sh-xs:    0 1px 2px rgba(0,0,0,0.05);
+  --sh-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --sh-md:    0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --sh-lg:    0 8px 32px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
   --sh-brand: 0 8px 24px rgba(34,87,255,0.28);
-  --sh-green: 0 8px 24px rgba(0,214,143,0.28);
+  --sh-green: 0 8px 24px rgba(16,185,129,0.24);
 
   /* ── Radius ───────────────────────────────────────────────────── */
   --r-sm:   0.5rem;
@@ -108,6 +114,7 @@
     -webkit-tap-highlight-color: transparent;
     font-family: var(--font-poppins), "Poppins", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
@@ -116,16 +123,24 @@
     font-size: 16px;
     line-height: 1.5;
     overscroll-behavior: none;
-    background-image:
-      radial-gradient(circle at top left, rgba(34,87,255,0.05), transparent 28%),
-      radial-gradient(circle at top right, rgba(0,214,143,0.05), transparent 24%);
   }
 }
 
 /* ─── Composants ────────────────────────────────────────────────── */
 @layer components {
 
-  /* CTA principal bleu Fiissa */
+  /* ── Bouton action Orange — Scan & Go, Panier, Payer ─────────── */
+  .btn-action {
+    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
+    @apply rounded-2xl font-black text-base text-white;
+    @apply transition-all duration-150 active:scale-95 select-none;
+    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+    background: var(--color-action);
+    box-shadow: var(--sh-action);
+  }
+  .btn-action:not(:disabled):hover { background: var(--color-action-dark); }
+
+  /* ── Bouton primaire Bleu Fiissa — portail marchand ──────────── */
   .btn-primary {
     @apply w-full flex items-center justify-center gap-2 py-4 px-6;
     @apply rounded-2xl font-bold text-base text-white;
@@ -136,7 +151,7 @@
   }
   .btn-primary:not(:disabled):hover { background: var(--p-600); }
 
-  /* CTA succès vert Fiissa */
+  /* ── Bouton vert succès ──────────────────────────────────────── */
   .btn-success {
     @apply w-full flex items-center justify-center gap-2 py-4 px-6;
     @apply rounded-2xl font-bold text-base text-white;
@@ -147,42 +162,43 @@
   }
   .btn-success:not(:disabled):hover { background: var(--s-600); }
 
-  /* Secondaire — outline bleu */
+  /* ── Bouton secondaire outline noir ─────────────────────────── */
   .btn-secondary {
     @apply w-full flex items-center justify-center gap-2 py-4 px-6;
     @apply rounded-2xl font-semibold text-base border-2;
     @apply transition-all duration-150 active:scale-95 select-none;
-    background: var(--p-50);
-    color: var(--p-500);
-    border-color: var(--p-200);
+    background: var(--n-0);
+    color: var(--tx-head);
+    border-color: var(--bd);
   }
+  .btn-secondary:hover { border-color: var(--n-400); }
 
-  /* Danger */
+  /* ── Bouton danger ───────────────────────────────────────────── */
   .btn-danger {
     @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-semibold text-base border-2;
+    @apply rounded-2xl font-semibold text-base border;
     @apply transition-all duration-150 active:scale-95 select-none;
     background: var(--error-bg);
     color: var(--error);
-    border-color: var(--error);
+    border-color: #FCA5A5;
   }
 
-  /* Input mobile (grand, accessible) */
+  /* ── Input mobile grand, accessible ─────────────────────────── */
   .input-mobile {
     @apply w-full py-4 px-4 text-base outline-none transition-all;
     background: var(--n-50);
-    border: 2px solid var(--bd);
+    border: 1.5px solid var(--bd);
     border-radius: var(--r-xl);
     color: var(--tx-head);
   }
-  .input-mobile::placeholder { color: var(--tx-muted); }
+  .input-mobile::placeholder { color: var(--n-400); }
   .input-mobile:focus {
     background: var(--n-0);
     border-color: var(--bd-focus);
-    box-shadow: 0 0 0 4px rgba(34,87,255,0.10);
+    box-shadow: 0 0 0 3px rgba(17,17,17,0.08);
   }
 
-  /* Card */
+  /* ── Card ────────────────────────────────────────────────────── */
   .card {
     background: var(--bg-card);
     border: 1px solid var(--bd);
@@ -198,74 +214,55 @@
     box-shadow: var(--sh-sm);
   }
 
-  .hero-panel {
-    position: relative;
+  /* ── Section list iOS style ──────────────────────────────────── */
+  .ios-list {
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-2xl);
     overflow: hidden;
-    border-radius: 2rem;
-    color: white;
-    background: linear-gradient(145deg, #0d1227 0%, #1333b3 58%, #00ab72 100%);
-    box-shadow: 0 20px 48px rgba(13, 18, 39, 0.22);
+  }
+  .ios-list-item {
+    @apply flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors cursor-pointer;
+  }
+  .ios-list-item + .ios-list-item {
+    border-top: 1px solid var(--bg-layout);
+  }
+  .ios-list-icon {
+    @apply w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0;
   }
 
-  .hero-panel::before,
-  .hero-panel::after {
-    content: "";
-    position: absolute;
-    border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.09);
-  }
-
-  .hero-panel::before {
-    width: 8rem;
-    height: 8rem;
-    top: -2.5rem;
-    right: -2rem;
-  }
-
-  .hero-panel::after {
-    width: 5rem;
-    height: 5rem;
-    right: 2.5rem;
-    bottom: -1.25rem;
-  }
-
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 9999px;
-    padding: 0.35rem 0.85rem;
-    font-size: 0.68rem;
-    font-weight: 900;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.92);
-  }
-
+  /* ── Segmented control ───────────────────────────────────────── */
   .segmented-chip {
     @apply shrink-0 rounded-full px-4 py-2 text-sm font-bold transition-all;
     background: var(--n-100);
     color: var(--tx-muted);
     border: 1px solid transparent;
   }
-
   .segmented-chip.active {
     background: var(--tx-head);
     color: white;
     box-shadow: var(--sh-sm);
   }
 
+  /* ── Labels ──────────────────────────────────────────────────── */
   .field-label {
     display: block;
     margin-bottom: 0.45rem;
     font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tx-muted);
+  }
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--tx-muted);
   }
 
+  /* ── Toggle ──────────────────────────────────────────────────── */
   .toggle-shell {
     display: flex;
     align-items: flex-start;
@@ -275,7 +272,6 @@
     background: var(--n-50);
     border: 1px solid var(--bd);
   }
-
   .toggle-switch {
     position: relative;
     width: 3rem;
@@ -286,46 +282,39 @@
     transition: background 150ms ease;
     background: var(--n-300);
   }
-
-  .toggle-switch.active {
-    background: var(--p-500);
-  }
-
+  .toggle-switch.active { background: var(--color-action); }
   .toggle-switch::after {
     content: "";
     position: absolute;
-    top: 0.2rem;
-    left: 0.24rem;
-    width: 1.15rem;
-    height: 1.15rem;
+    top: 0.2rem; left: 0.24rem;
+    width: 1.15rem; height: 1.15rem;
     border-radius: 9999px;
     background: white;
-    box-shadow: 0 2px 8px rgba(13, 18, 39, 0.16);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.16);
     transition: transform 150ms ease;
   }
+  .toggle-switch.active::after { transform: translateX(1.4rem); }
 
-  .toggle-switch.active::after {
-    transform: translateX(1.4rem);
-  }
-
-  /* Product card */
+  /* ── Product card ────────────────────────────────────────────── */
   .product-card {
     @apply card p-3 cursor-pointer;
     @apply transition-transform duration-100 active:scale-98;
   }
 
-  /* Page container */
+  /* ── Page container ──────────────────────────────────────────── */
   .page-container {
     @apply min-h-screen flex flex-col;
     background: var(--bg-app);
   }
 
-  /* Bottom nav */
+  /* ── Bottom nav ──────────────────────────────────────────────── */
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 z-50 flex;
-    background: var(--bg-card);
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--bd);
-    box-shadow: 0 -4px 20px rgba(13,18,39,0.06);
+    box-shadow: 0 -1px 0 var(--bd), 0 -4px 24px rgba(0,0,0,0.05);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .nav-item {
@@ -334,13 +323,11 @@
     color: var(--tx-muted);
     min-height: 56px;
   }
-  .nav-item.active { color: var(--p-500); }
-  .nav-item svg    { transition: color 150ms; }
+  .nav-item.active    { color: var(--tx-head); }
+  .nav-item.active svg { }
 
-  /* Badges statuts */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
-  }
+  /* ── Badges statuts ──────────────────────────────────────────── */
+  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold; }
   .badge-draft     { background: var(--n-100);        color: var(--n-600); }
   .badge-pending   { background: var(--warning-bg);   color: var(--warning-dark); }
   .badge-awaiting  { background: #FFF7ED;              color: #C2410C; }
@@ -352,7 +339,7 @@
   .badge-cancelled { background: var(--error-bg);     color: var(--error-dark); }
   .badge-refunded  { background: var(--n-100);        color: var(--n-500); }
 
-  /* Skeleton */
+  /* ── Skeleton ────────────────────────────────────────────────── */
   .skeleton {
     @apply rounded-xl;
     background: linear-gradient(90deg, var(--n-100) 25%, var(--n-200) 50%, var(--n-100) 75%);
@@ -360,8 +347,8 @@
     animation: shimmer 1.4s infinite;
   }
 
-  /* Gradient brand */
-  .bg-brand { background: var(--fiissa-gradient); }
+  /* ── Brand gradient ──────────────────────────────────────────── */
+  .bg-brand   { background: var(--fiissa-gradient); }
   .text-gradient {
     background: var(--fiissa-gradient);
     -webkit-background-clip: text;
@@ -369,16 +356,48 @@
     background-clip: text;
   }
 
-  /* Pill catégorie active */
+  /* ── Pills catégorie ─────────────────────────────────────────── */
   .pill-active {
-    background: var(--p-500);
+    background: var(--tx-head);
     color: white;
-    box-shadow: var(--sh-brand);
+    box-shadow: var(--sh-sm);
   }
   .pill {
     @apply px-4 py-1.5 rounded-full text-sm font-medium transition-all;
     background: var(--n-100);
     color: var(--tx-muted);
+  }
+
+  /* ── Hero panel marchand ─────────────────────────────────────── */
+  .hero-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem;
+    color: white;
+    background: linear-gradient(145deg, #0d1227 0%, #1333b3 58%, #00ab72 100%);
+    box-shadow: 0 20px 48px rgba(13,18,39,0.22);
+  }
+  .hero-panel::before, .hero-panel::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.09);
+  }
+  .hero-panel::before { width: 8rem; height: 8rem; top: -2.5rem; right: -2rem; }
+  .hero-panel::after  { width: 5rem; height: 5rem; right: 2.5rem; bottom: -1.25rem; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.92);
   }
 
   .pb-safe { padding-bottom: max(env(safe-area-inset-bottom, 0px), 5rem); }
@@ -388,8 +407,7 @@
 /* ─── Spinner ───────────────────────────────────────────────────── */
 .spinner {
   display: inline-block;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.25rem; height: 1.25rem;
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 9999px;
@@ -401,12 +419,12 @@
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
-@keyframes spin      { to { transform: rotate(360deg); } }
-@keyframes slide-up  {
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
-@keyframes fade-in   {
+@keyframes fade-in  {
   from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
@@ -419,13 +437,13 @@
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 .glass {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   background: rgba(255,255,255,0.88);
   border: 1px solid rgba(255,255,255,0.5);
 }
 
-/* Reçu HTML injecté */
+/* ─── Reçu HTML injecté ─────────────────────────────────────────── */
 .receipt-html {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 13px;

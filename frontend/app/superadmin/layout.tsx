@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, BarChart2, Users, Settings, LogOut, Shield, ChevronRight } from "lucide-react";
+import { Building2, BarChart2, Users, Settings, LogOut, Shield, ChevronRight, CreditCard, Activity } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 
 const NAV = [
-  { href: "/superadmin/companies", icon: Building2, label: "Entreprises" },
-  { href: "/superadmin/stats",     icon: BarChart2,  label: "Statistiques" },
-  { href: "/superadmin/users",     icon: Users,      label: "Utilisateurs"  },
-  { href: "/superadmin/settings",  icon: Settings,   label: "Paramètres"    },
+  { href: "/superadmin/companies",  icon: Building2,  label: "Entreprises"  },
+  { href: "/superadmin/stats",      icon: BarChart2,  label: "Statistiques" },
+  { href: "/superadmin/users",      icon: Users,      label: "Utilisateurs" },
+  { href: "/superadmin/plans",      icon: CreditCard, label: "Plans"        },
+  { href: "/superadmin/audit-logs", icon: Activity,   label: "Audit Logs"   },
+  { href: "/superadmin/settings",   icon: Settings,   label: "Paramètres"  },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {

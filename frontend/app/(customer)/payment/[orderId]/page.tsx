@@ -3,150 +3,192 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Copy, Clock } from "lucide-react";
+import {
+  ArrowLeft, Copy, Check, Clock, Shield,
+  Smartphone, ChevronRight,
+} from "lucide-react";
 import { ordersApi, paymentsApi } from "@/lib/api";
 import { toast } from "sonner";
 
+/* ── Opérateurs Mobile Money Afrique de l'Ouest ── */
 const OPERATORS = [
-  { id: "wave",         label: "Wave",         abbr: "W",  bg: "#1A56DB", light: "#EBF5FF", desc: "Paiement via Wave" },
-  { id: "orange_money", label: "Orange Money", abbr: "OM", bg: "#F97316", light: "#FFF7ED", desc: "Orange Money USSD" },
-  { id: "mtn_momo",    label: "MTN MoMo",     abbr: "M",  bg: "#EAB308", light: "#FEFCE8", desc: "MTN Mobile Money" },
-  { id: "free_money",  label: "Free Money",   abbr: "FM", bg: "#EF4444", light: "#FEF2F2", desc: "Free Money Sénégal" },
-  { id: "moov_money",  label: "Moov Money",   abbr: "MV", bg: "#0284C7", light: "#F0F9FF", desc: "Moov Africa Money" },
+  { id: "tmoney",      label: "T-Money",      abbr: "TM", bg: "#E11D48", desc: "Togocel · *145#" },
+  { id: "flooz",       label: "Flooz",         abbr: "FL", bg: "#F97316", desc: "Moov Africa · *155#" },
+  { id: "wave",        label: "Wave",          abbr: "W",  bg: "#1D4ED8", desc: "Wave · App mobile" },
+  { id: "orange_money",label: "Orange Money",  abbr: "OM", bg: "#EA580C", desc: "Orange · #144#" },
+  { id: "mtn_momo",   label: "MTN MoMo",      abbr: "M",  bg: "#CA8A04", desc: "MTN · *170#" },
 ];
 
-export default function PaymentPage() {
-  const params = useParams();
-  const router = useRouter();
-  const orderId = params.orderId as string;
+/* ── Utilitaire copier ── */
+function useCopy() {
+  const [copied, setCopied] = useState("");
+  const copy = (text: string, key: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopied(key);
+    setTimeout(() => setCopied(""), 2000);
+  };
+  return { copy, copied };
+}
 
-  const [step, setStep] = useState<"select_operator" | "instructions" | "submit" | "waiting">("select_operator");
-  const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
+/* ─────────────────────────────────────────────────────────────
+   Page principale
+───────────────────────────────────────────────────────────── */
+export default function PaymentPage() {
+  const { orderId } = useParams<{ orderId: string }>();
+  const router      = useRouter();
+  const { copy, copied } = useCopy();
+
+  type Step = "select" | "instructions" | "submit" | "waiting";
+  const [step, setStep]             = useState<Step>("select");
+  const [operator, setOperator]     = useState<string | null>(null);
+  const [paymentId, setPaymentId]   = useState<string | null>(null);
   const [instructions, setInstructions] = useState<any>(null);
-  const [transactionRef, setTransactionRef] = useState("");
+  const [txRef, setTxRef]           = useState("");
   const [senderPhone, setSenderPhone] = useState("");
 
-  const { data: order } = useQuery({
+  /* Chargement commande */
+  const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => ordersApi.getOrderDetail(orderId).then((r) => r.data),
+    enabled: !!orderId,
   });
 
-  const createPaymentMutation = useMutation({
-    mutationFn: (operator: string) =>
-      paymentsApi.create({
-        order_id: orderId,
-        company_id: order?.company_id,
-        method: "mobile_money",
-        operator,
-      }),
+  /* Créer le paiement */
+  const createMutation = useMutation({
+    mutationFn: (op: string) =>
+      paymentsApi.create({ order_id: orderId, company_id: order?.company_id, method: "mobile_money", operator: op }),
     onSuccess: (res) => {
       setPaymentId(res.data.payment_id);
       setInstructions(res.data.instructions);
       setStep("instructions");
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur"),
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur paiement"),
   });
 
-  const submitProofMutation = useMutation({
+  /* Soumettre la preuve */
+  const submitMutation = useMutation({
     mutationFn: () =>
-      paymentsApi.submitProof(paymentId!, {
-        transaction_ref: transactionRef.trim(),
-        sender_phone: senderPhone.trim(),
-      }),
-    onSuccess: () => setStep("waiting"),
+      paymentsApi.submitProof(paymentId!, { transaction_ref: txRef.trim(), sender_phone: senderPhone.trim() }),
+    onSuccess: () => {
+      setStep("waiting");
+      /* Après 3s, rediriger vers la page succès */
+      setTimeout(() => router.push(`/payment/${orderId}/success`), 3000);
+    },
     onError: (e: any) => {
       const code = e.response?.data?.code;
-      if (code === "duplicate_payment_ref") {
-        toast.error("Cette référence a déjà été utilisée. Vérifiez votre saisie.");
-      } else {
-        toast.error(e.response?.data?.message || "Erreur");
-      }
+      toast.error(
+        code === "duplicate_payment_ref"
+          ? "Cette référence a déjà été utilisée."
+          : e.response?.data?.message || "Erreur"
+      );
     },
   });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copié !");
-  };
+  const selectedOp = OPERATORS.find((o) => o.id === operator);
 
-  if (!order) {
+  /* ── Loader ── */
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: `var(--p-500) transparent transparent transparent` }} />
+      <div style={{ background: "var(--bg-layout)", minHeight: "100vh" }}>
+        <div className="px-5 py-20 flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+            style={{ borderColor: "var(--color-action) transparent transparent transparent" }} />
+          <p style={{ color: "var(--tx-muted)" }}>Chargement…</p>
+        </div>
       </div>
     );
   }
 
+  if (!order) return null;
+
   return (
-    <div style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
-      {/* Header */}
-      <div className="px-4 pt-4 pb-4 flex items-center" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }}>
-        <button onClick={() => router.back()} className="mr-3">
-          <ArrowLeft size={22} style={{ color: "var(--tx-head)" }} />
+    <div style={{ background: "var(--bg-layout)", minHeight: "100vh" }}>
+
+      {/* ─── Header ─── */}
+      <header
+        className="sticky top-0 z-40 flex items-center gap-3 px-5"
+        style={{
+          height: 56,
+          background: "rgba(255,255,255,0.94)",
+          backdropFilter: "blur(20px)",
+          borderBottom: "1px solid var(--bd)",
+        }}
+      >
+        <button
+          onClick={() => step === "select" ? router.back() : setStep("select")}
+          className="w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: "var(--n-100)" }}
+        >
+          <ArrowLeft size={18} style={{ color: "#111111" }} />
         </button>
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--tx-head)" }}>Paiement</h1>
-          <p className="text-sm" style={{ color: "var(--tx-muted)" }}>Commande {order.order_number}</p>
+        <div className="flex-1">
+          <p className="font-black text-base" style={{ color: "#111111" }}>Paiement</p>
+          <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
+            {order.order_number} · {order.store?.name ?? "Fiissa"}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+          style={{ background: "var(--s-50)", color: "var(--s-700)" }}>
+          <Shield size={12} />Sécurisé
+        </div>
+      </header>
+
+      {/* ─── Bloc montant (toujours visible) ─── */}
+      <div className="px-5 pt-5">
+        <div
+          className="rounded-3xl p-6 text-center"
+          style={{ background: "#FFFFFF", border: "1px solid var(--bd)", boxShadow: "var(--sh-sm)" }}
+        >
+          <p className="section-label mb-2">Total à régler</p>
+          <p className="text-5xl font-black tracking-tight" style={{ color: "#111111" }}>
+            {order.total_xof?.toLocaleString("fr-FR")}
+          </p>
+          <p className="text-lg font-bold mt-1" style={{ color: "var(--tx-muted)" }}>FCFA</p>
+          {selectedOp && (
+            <div className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full text-xs font-bold"
+              style={{ background: "var(--n-100)", color: "var(--tx-body)" }}>
+              <div className="w-4 h-4 rounded-sm flex items-center justify-center text-white text-[8px] font-black"
+                style={{ background: selectedOp.bg }}>{selectedOp.abbr}</div>
+              {selectedOp.label}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Bloc montant */}
-      <div className="mx-4 mt-4 rounded-2xl p-5 text-center" style={{ background: "var(--fiissa-gradient)", boxShadow: "var(--sh-brand)" }}>
-        <p className="text-white/80 text-sm">Montant à payer</p>
-        <p className="text-4xl font-black text-white mt-1">{order.total_xof?.toLocaleString("fr-FR")}</p>
-        <p className="text-white/80 text-lg">FCFA</p>
-      </div>
-
-      {/* ÉTAPE 1 — Choisir l'opérateur */}
-      {step === "select_operator" && (
-        <div className="px-4 mt-6">
-          <p className="text-xs font-black uppercase tracking-[0.16em] mb-4" style={{ color: "var(--tx-muted)" }}>
-            Choisissez votre opérateur Mobile Money
-          </p>
-          <div className="space-y-2">
-            {OPERATORS.map((op) => {
-              const isSelected = selectedOperator === op.id;
-              const isPending  = createPaymentMutation.isPending && isSelected;
+      {/* ══════════ ÉTAPE 1 — Choisir l'opérateur ══════════ */}
+      {step === "select" && (
+        <div className="px-5 pt-5 pb-8">
+          <p className="section-label mb-3">Choisir votre opérateur</p>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+          >
+            {OPERATORS.map((op, i) => {
+              const isSelected = operator === op.id;
+              const isPending  = createMutation.isPending && isSelected;
               return (
                 <button
                   key={op.id}
-                  onClick={() => {
-                    setSelectedOperator(op.id);
-                    createPaymentMutation.mutate(op.id);
-                  }}
-                  disabled={createPaymentMutation.isPending}
-                  className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-95 transition-all text-left"
-                  style={{
-                    background: isSelected ? op.light : "var(--bg-card)",
-                    border: `2px solid ${isSelected ? op.bg : "var(--bd)"}`,
-                  }}
+                  onClick={() => { setOperator(op.id); createMutation.mutate(op.id); }}
+                  disabled={createMutation.isPending}
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left active:bg-gray-50 transition-colors disabled:opacity-60"
+                  style={{ borderBottom: i < OPERATORS.length - 1 ? "1px solid var(--bg-layout)" : "none" }}
                 >
-                  {/* Initiales colorées */}
                   <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
                     style={{ background: op.bg }}
                   >
-                    <span className="text-white font-black text-sm tracking-tight">{op.abbr}</span>
+                    {op.abbr}
                   </div>
-
                   <div className="flex-1 min-w-0">
-                    <p className="font-black text-base" style={{ color: "var(--tx-head)" }}>{op.label}</p>
+                    <p className="font-bold text-sm" style={{ color: "#111111" }}>{op.label}</p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>{op.desc}</p>
                   </div>
-
-                  {isPending ? (
-                    <div
-                      className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin shrink-0"
-                      style={{ borderColor: `${op.bg} transparent transparent transparent` }}
-                    />
-                  ) : isSelected ? (
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: op.bg }}>
-                      <span className="text-white text-xs font-black">✓</span>
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full shrink-0" style={{ border: `2px solid var(--bd)` }} />
-                  )}
+                  {isPending
+                    ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                        style={{ borderColor: `${op.bg} transparent transparent transparent` }} />
+                    : <ChevronRight size={16} style={{ color: "var(--n-300)" }} />
+                  }
                 </button>
               );
             })}
@@ -154,75 +196,78 @@ export default function PaymentPage() {
         </div>
       )}
 
-      {/* ÉTAPE 2 — Instructions */}
+      {/* ══════════ ÉTAPE 2 — Instructions ══════════ */}
       {step === "instructions" && instructions && (
-        <div className="px-4 mt-6 space-y-4">
-          <div className="rounded-2xl p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <h2 className="font-bold text-lg mb-4" style={{ color: "var(--tx-head)" }}>📱 Instructions de paiement</h2>
-            <div className="space-y-3">
-              {[
-                { label: "Opérateur", value: instructions.operator },
-                { label: "Numéro à envoyer", value: instructions.number, copyable: true },
-                { label: "Nom du compte", value: instructions.account_name },
-                { label: "Montant", value: `${order.total_xof?.toLocaleString("fr-FR")} FCFA` },
-                { label: "Référence à indiquer", value: instructions.reference_to_include, copyable: true },
-              ].map(({ label, value, copyable }) => (
-                <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: "1px solid var(--bg-app)" }}>
-                  <div>
-                    <p className="text-xs" style={{ color: "var(--tx-muted)" }}>{label}</p>
-                    <p className="font-bold" style={{ color: "var(--tx-head)" }}>{value}</p>
-                  </div>
-                  {copyable && (
-                    <button onClick={() => copyToClipboard(value)} className="p-2" style={{ color: "var(--p-500)" }}>
-                      <Copy size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+        <div className="px-5 pt-5 space-y-4 pb-8">
+          <p className="section-label">Instructions de transfert</p>
 
-            <div className="mt-4 rounded-xl p-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
-              <p className="text-sm font-bold" style={{ color: "#92400E" }}>⚠️ Important</p>
-              <p className="text-sm mt-1" style={{ color: "#B45309" }}>
-                Mentionnez la référence <strong>{instructions.reference_to_include}</strong> dans le motif de paiement.
-              </p>
-            </div>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}>
+            {[
+              { label: "Numéro à envoyer", value: instructions.number, key: "num" },
+              { label: "Nom du compte",    value: instructions.account_name, key: "name" },
+              { label: "Montant exact",    value: `${order.total_xof?.toLocaleString("fr-FR")} FCFA`, key: "amt" },
+              { label: "Référence",        value: instructions.reference_to_include, key: "ref" },
+            ].map(({ label, value, key }, i, arr) => (
+              <div
+                key={key}
+                className="flex items-center justify-between px-5 py-4"
+                style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--bg-layout)" : "none" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-xs" style={{ color: "var(--tx-muted)" }}>{label}</p>
+                  <p className="font-black text-base mt-0.5 truncate" style={{ color: "#111111" }}>{value}</p>
+                </div>
+                <button
+                  onClick={() => copy(value, key)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 transition-colors"
+                  style={{ background: copied === key ? "var(--s-500)" : "var(--n-100)" }}
+                >
+                  {copied === key
+                    ? <Check size={14} className="text-white" />
+                    : <Copy size={14} style={{ color: "var(--tx-muted)" }} />
+                  }
+                </button>
+              </div>
+            ))}
           </div>
 
-          <button onClick={() => setStep("submit")} className="btn-primary">
-            J'ai effectué le paiement ✓
+          <div className="rounded-2xl p-4 flex items-start gap-3"
+            style={{ background: "rgba(255,159,0,0.08)", border: "1px solid rgba(255,159,0,0.25)" }}>
+            <span className="text-lg flex-shrink-0">⚠️</span>
+            <p className="text-sm" style={{ color: "#92400E" }}>
+              Mentionnez la référence <strong>{instructions.reference_to_include}</strong> dans le motif de votre transfert.
+            </p>
+          </div>
+
+          <button onClick={() => setStep("submit")} className="btn-action">
+            J'ai effectué le transfert →
           </button>
         </div>
       )}
 
-      {/* ÉTAPE 3 — Saisir la preuve */}
+      {/* ══════════ ÉTAPE 3 — Preuves ══════════ */}
       {step === "submit" && (
-        <div className="px-4 mt-6 space-y-4">
-          <div className="rounded-2xl p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <h2 className="font-bold text-lg mb-2" style={{ color: "var(--tx-head)" }}>Confirmer votre paiement</h2>
-            <p className="text-sm mb-5" style={{ color: "var(--tx-muted)" }}>
-              Saisissez la référence de la transaction que vous venez d'effectuer.
-            </p>
-            <div className="space-y-4">
+        <div className="px-5 pt-5 space-y-4 pb-8">
+          <p className="section-label">Confirmer votre paiement</p>
+
+          <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}>
+            <div className="px-5 py-5 space-y-4">
               <div>
-                <label className="text-sm font-semibold mb-1 block" style={{ color: "var(--tx-body)" }}>
-                  Référence de transaction *
-                </label>
+                <label className="field-label">Référence de transaction *</label>
                 <input
                   type="text"
-                  placeholder="Ex: WV20241125001234"
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                  className="input-mobile"
+                  placeholder="Ex : TGO20241225XXXXXX"
+                  value={txRef}
+                  onChange={(e) => setTxRef(e.target.value.toUpperCase())}
+                  className="input-mobile font-mono tracking-widest"
+                  autoComplete="off"
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold mb-1 block" style={{ color: "var(--tx-body)" }}>
-                  Numéro depuis lequel vous avez payé
-                </label>
+                <label className="field-label">Numéro expéditeur (optionnel)</label>
                 <input
                   type="tel"
-                  placeholder="Ex: +221 77 123 45 67"
+                  placeholder="+228 90 XX XX XX"
                   value={senderPhone}
                   onChange={(e) => setSenderPhone(e.target.value)}
                   className="input-mobile"
@@ -232,46 +277,69 @@ export default function PaymentPage() {
           </div>
 
           <button
-            onClick={() => submitProofMutation.mutate()}
-            disabled={!transactionRef || submitProofMutation.isPending}
-            className="btn-primary"
+            onClick={() => submitMutation.mutate()}
+            disabled={!txRef.trim() || submitMutation.isPending}
+            className="btn-action"
           >
-            {submitProofMutation.isPending ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="spinner border-white border-t-transparent" />
-                Envoi en cours...
-              </span>
-            ) : (
-              "Soumettre mon paiement"
-            )}
+            {submitMutation.isPending
+              ? <span className="flex items-center gap-2"><div className="spinner border-white border-t-transparent" />Vérification…</span>
+              : <><Shield size={18} />Soumettre mon paiement</>
+            }
           </button>
+
+          <p className="text-center text-xs" style={{ color: "var(--n-400)" }}>
+            🔒 Aucun code PIN n'est stocké
+          </p>
         </div>
       )}
 
-      {/* ÉTAPE 4 — En attente */}
+      {/* ══════════ ÉTAPE 4 — En attente ══════════ */}
       {step === "waiting" && (
-        <div className="px-4 mt-6">
-          <div className="rounded-2xl p-8 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto" style={{ background: "rgba(34,87,255,0.08)" }}>
-              <Clock style={{ color: "var(--p-500)" }} size={40} />
+        <div className="px-5 pt-8 pb-8 flex flex-col items-center text-center gap-6">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center"
+              style={{ background: "var(--s-50)" }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse"
+                style={{ background: "var(--s-500)" }}>
+                <Clock size={28} className="text-white" />
+              </div>
             </div>
-            <h2 className="text-xl font-bold mt-4" style={{ color: "var(--tx-head)" }}>Vérification en cours</h2>
-            <p className="mt-2" style={{ color: "var(--tx-muted)" }}>
-              Le magasin vérifie votre paiement. Vous serez notifié dès que c'est confirmé.
-            </p>
-            <div className="mt-6 rounded-xl p-4 text-left" style={{ background: "rgba(34,87,255,0.06)" }}>
-              <p className="font-semibold text-sm" style={{ color: "var(--p-500)" }}>Que se passe-t-il ensuite ?</p>
-              <ul className="mt-2 space-y-1 text-sm" style={{ color: "var(--p-500)" }}>
-                <li>1. Le magasin vérifie la transaction</li>
-                <li>2. Vous recevez une notification</li>
-                <li>3. Votre commande est préparée</li>
-                <li>4. Vous êtes prévenu quand c'est prêt</li>
-              </ul>
-            </div>
-            <button onClick={() => router.push("/orders")} className="btn-secondary mt-6">
-              Suivre mes commandes
-            </button>
+            <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+              style={{ background: "var(--s-500)" }} />
           </div>
+
+          <div>
+            <p className="text-2xl font-black" style={{ color: "#111111" }}>Vérification en cours</p>
+            <p className="text-sm mt-2" style={{ color: "var(--tx-muted)" }}>
+              Le magasin vérifie votre paiement. Redirection automatique…
+            </p>
+          </div>
+
+          <div className="w-full rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}>
+            {[
+              { done: true,  label: "Transfert soumis" },
+              { done: false, label: "Vérification du magasin" },
+              { done: false, label: "Génération du QR de sortie" },
+            ].map(({ done, label }, i) => (
+              <div key={i} className="flex items-center gap-3 px-5 py-3.5"
+                style={{ borderBottom: i < 2 ? "1px solid var(--bg-layout)" : "none" }}>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: done ? "var(--s-500)" : "var(--n-200)" }}>
+                  {done
+                    ? <Check size={13} className="text-white" />
+                    : <div className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--n-400)" }} />
+                  }
+                </div>
+                <p className="text-sm font-semibold" style={{ color: done ? "var(--s-700)" : "var(--tx-muted)" }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => router.push("/orders")} className="btn-secondary w-full">
+            Voir mes commandes
+          </button>
         </div>
       )}
     </div>

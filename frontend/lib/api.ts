@@ -135,6 +135,12 @@ export const superadminApi = {
     api.post(`/superadmin/registration-requests/${requestId}/approve`),
   rejectRegistrationRequest: (requestId: string, reason?: string) =>
     api.post(`/superadmin/registration-requests/${requestId}/reject`, { reason }),
+  getAuditLogs: (params?: { company_id?: string; action?: string; limit?: number }) =>
+    api.get("/superadmin/audit-logs", { params }),
+  createPlan: (data: { code: string; name: string; billing_cycle: string; amount_xof: number; commission_rate: number; features?: Record<string, any> }) =>
+    api.post("/superadmin/plans", data),
+  activateCompany: (companyId: string) =>
+    api.post(`/superadmin/companies/${companyId}/activate`),
 };
 
 export const companiesApi = {
