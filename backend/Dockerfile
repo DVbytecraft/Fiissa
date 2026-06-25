@@ -56,10 +56,11 @@ RUN groupadd -r appuser && useradd -r -g appuser -s /sbin/nologin appuser
 # ── Répertoires media avec ownership correct ───────────────────────────────────
 RUN mkdir -p /app/media/receipts /app/media/products /app/media/temp \
              /app/celerybeat-data \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && chmod +x /app/start.sh
 
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/bin/bash", "/app/start.sh"]
