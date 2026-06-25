@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -38,7 +38,7 @@ export default function PaymentPage() {
   const router      = useRouter();
   const { copy, copied } = useCopy();
 
-  type Step = "select" | "instructions" | "submit" | "waiting";
+  type Step = "select" | "instructions" | "submit" | "waiting" | "manual";
   const [step, setStep]             = useState<Step>("select");
   const [operator, setOperator]     = useState<string | null>(null);
   const [paymentId, setPaymentId]   = useState<string | null>(null);
@@ -51,6 +51,31 @@ export default function PaymentPage() {
     queryKey: ["order", orderId],
     queryFn: () => ordersApi.getOrderDetail(orderId).then((r) => r.data),
     enabled: !!orderId,
+  });
+
+  /* Détection mode paiement manuel du magasin */
+  const isManualMode = (() => {
+    const mode = order?.store?.payment_mode ?? order?.payment_mode ?? "";
+    return mode === "manual" || mode === "GRATUIT_MANUEL" || mode === "free_manual";
+  })();
+
+  /* Mutation dédiée au mode manuel (create + submit en une seule passe) */
+  const manualSubmitMutation = useMutation({
+    mutationFn: async () => {
+      const payRes = await paymentsApi.create({
+        order_id: orderId,
+        company_id: order?.company_id,
+        method: "manual",
+        operator: "manual",
+      });
+      const pid = payRes.data.payment_id ?? payRes.data.id;
+      await paymentsApi.submitProof(pid, { transaction_ref: txRef.trim(), sender_phone: senderPhone.trim() });
+    },
+    onSuccess: () => {
+      setStep("waiting");
+      setTimeout(() => router.push(`/payment/${orderId}/success`), 2500);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur lors de la finalisation"),
   });
 
   /* Créer le paiement */
@@ -85,6 +110,13 @@ export default function PaymentPage() {
   });
 
   const selectedOp = OPERATORS.find((o) => o.id === operator);
+
+  /* Bascule auto en mode manuel dès que l'order est disponible */
+  useEffect(() => {
+    if (order && isManualMode && step === "select") {
+      setStep("manual");
+    }
+  }, [order, isManualMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Loader ── */
   if (isLoading) {
@@ -154,6 +186,107 @@ export default function PaymentPage() {
           )}
         </div>
       </div>
+
+      {/* ══════════ MODE GRATUIT_MANUEL ══════════ */}
+      {step === "manual" && (
+        <div className="px-5 pt-5 space-y-4 pb-8">
+
+          {/* Instruction principale */}
+          <div
+            className="rounded-3xl p-6 text-center"
+            style={{ background: "#FFFFFF", border: "2.5px solid #111111" }}
+          >
+            <p className="text-4xl mb-4">💸</p>
+            <p className="text-base font-bold" style={{ color: "#111111" }}>
+              Veuillez envoyer
+            </p>
+            <p className="font-black mt-1 mb-1" style={{ fontSize: 42, color: "#111111", lineHeight: 1.1 }}>
+              {order.total_xof?.toLocaleString("fr-FR")}
+            </p>
+            <p className="text-xl font-bold mb-4" style={{ color: "var(--tx-muted)" }}>FCFA</p>
+            <p className="text-base font-bold" style={{ color: "#111111" }}>
+              au code T-Money / Flooz Marchand de la boutique :
+            </p>
+            {/* Numéro marchand */}
+            <div
+              className="mt-4 py-4 px-5 rounded-2xl"
+              style={{ background: "var(--n-50)", border: "1px solid var(--bd)" }}
+            >
+              <p
+                className="font-black font-mono tracking-widest"
+                style={{ fontSize: 28, color: "#111111" }}
+              >
+                {order.store?.merchant_phone
+                  ?? order.store?.phone
+                  ?? order.store?.contact_phone
+                  ?? "Voir en caisse"}
+              </p>
+              {order.store?.name && (
+                <p className="text-sm mt-1" style={{ color: "var(--tx-muted)" }}>{order.store.name}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Champ ID transaction SMS */}
+          <div
+            className="rounded-2xl p-5 space-y-3"
+            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+          >
+            <div>
+              <label className="field-label flex items-center gap-1 mb-2">
+                ID de transaction SMS
+                <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ex : TGO20241225XXXXXX"
+                value={txRef}
+                onChange={(e) => setTxRef(e.target.value.toUpperCase())}
+                className="input-mobile font-mono tracking-widest"
+                autoComplete="off"
+              />
+              <p className="text-xs mt-1.5" style={{ color: "var(--tx-muted)" }}>
+                L'identifiant reçu par SMS après votre transfert Mobile Money
+              </p>
+            </div>
+            <div>
+              <label className="field-label mb-2">Numéro expéditeur (optionnel)</label>
+              <input
+                type="tel"
+                placeholder="+228 90 XX XX XX"
+                value={senderPhone}
+                onChange={(e) => setSenderPhone(e.target.value)}
+                className="input-mobile"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (!txRef.trim()) {
+                toast.error("Entrez l'ID de transaction reçu par SMS");
+                return;
+              }
+              manualSubmitMutation.mutate();
+            }}
+            disabled={!txRef.trim() || manualSubmitMutation.isPending}
+            className="btn-action"
+          >
+            {manualSubmitMutation.isPending ? (
+              <span className="flex items-center gap-2">
+                <div className="spinner border-white border-t-transparent" />
+                Finalisation…
+              </span>
+            ) : (
+              <>Finaliser l'achat ✓</>
+            )}
+          </button>
+
+          <p className="text-center text-xs" style={{ color: "var(--n-400)" }}>
+            🔒 Aucun code PIN n'est stocké
+          </p>
+        </div>
+      )}
 
       {/* ══════════ ÉTAPE 1 — Choisir l'opérateur ══════════ */}
       {step === "select" && (

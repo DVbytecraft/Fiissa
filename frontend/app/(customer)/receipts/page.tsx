@@ -2,19 +2,42 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Receipt, ShieldCheck } from "lucide-react";
+import { Download, Receipt, ShieldCheck, WifiOff } from "lucide-react";
 import { receiptsApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 
 export default function ReceiptsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const [isOffline, setIsOffline] = useState(false);
+
+  /* ── Service Worker offline cache ── */
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/offline-receipts-sw.js", { scope: "/" })
+        .catch(() => {});
+    }
+
+    const handleOffline = () => setIsOffline(true);
+    const handleOnline  = () => setIsOffline(false);
+    setIsOffline(!navigator.onLine);
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-receipts"],
-    queryFn: () => receiptsApi.getMyReceipts().then((r) => r.data),
-    enabled: isAuthenticated,
+    queryFn:  () => receiptsApi.getMyReceipts().then((r) => r.data),
+    enabled:  isAuthenticated,
+    /* Données servies depuis le SW cache si hors ligne */
+    staleTime: 0,
   });
 
   if (!isAuthenticated) {
@@ -39,12 +62,10 @@ export default function ReceiptsPage() {
     );
   }
 
-  const receipts = data || [];
+  const receipts = Array.isArray(data) ? data : (data?.items ?? data?.results ?? []);
 
   const handleExportMonth = () => {
-    /* TODO: appel API export PDF mensuel */
-    const url = `/api/v1/receipts/export/monthly`;
-    window.open(url, "_blank");
+    window.open(`/api/v1/receipts/export/monthly`, "_blank");
   };
 
   return (
@@ -67,6 +88,19 @@ export default function ReceiptsPage() {
           </button>
         )}
       </div>
+
+      {/* Bannière hors ligne */}
+      {isOffline && (
+        <div
+          className="mx-4 mt-4 rounded-2xl px-4 py-3 flex items-center gap-3"
+          style={{ background: "rgba(107,114,128,0.12)", border: "1px solid rgba(107,114,128,0.25)" }}
+        >
+          <WifiOff size={16} style={{ color: "#6B7280" }} className="flex-shrink-0" />
+          <p className="text-sm font-bold" style={{ color: "#6B7280" }}>
+            Hors ligne — affichage depuis le cache local (5 derniers reçus)
+          </p>
+        </div>
+      )}
 
       <div className="px-5 py-4 space-y-3">
         {isLoading &&
@@ -116,9 +150,9 @@ export default function ReceiptsPage() {
               >
                 <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
                   {new Date(receipt.created_at).toLocaleDateString("fr-FR", {
-                    day: "numeric",
+                    day:   "numeric",
                     month: "long",
-                    year: "numeric",
+                    year:  "numeric",
                   })}
                 </p>
                 <div

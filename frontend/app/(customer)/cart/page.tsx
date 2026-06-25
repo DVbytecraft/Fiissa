@@ -48,6 +48,10 @@ export default function CartPage() {
         toast.error("Saisis ton adresse de livraison");
         return;
       }
+      if (deliveryType === "delivery" && !deliveryAddress.landmark.trim()) {
+        toast.error("Les repères de livraison sont obligatoires");
+        return;
+      }
       createOrderMutation.mutate();
     }
   };
@@ -275,15 +279,24 @@ export default function CartPage() {
                 onChange={(e) => setDeliveryAddress((a) => ({ ...a, city: e.target.value }))}
                 className="input-mobile"
               />
-              {/* Repère local — champ obligatoire spécification */}
-              <textarea
-                placeholder="Repère local (ex : maison barrière bleue, derrière station Total…)"
-                value={deliveryAddress.landmark}
-                onChange={(e) => setDeliveryAddress((a) => ({ ...a, landmark: e.target.value }))}
-                rows={3}
-                className="input-mobile resize-none"
-                style={{ lineHeight: 1.5 }}
-              />
+              <div>
+                <label className="text-xs font-black uppercase tracking-wide flex items-center gap-1 mb-1.5" style={{ color: "var(--tx-muted)" }}>
+                  Indications et repères pour le livreur
+                  <span style={{ color: "#EF4444" }}>*</span>
+                </label>
+                <textarea
+                  placeholder="Ex : Maison barrière bleue, derrière la station Total, 2ème portail à gauche…"
+                  value={deliveryAddress.landmark}
+                  onChange={(e) => setDeliveryAddress((a) => ({ ...a, landmark: e.target.value }))}
+                  rows={4}
+                  className="input-mobile resize-none"
+                  style={{ lineHeight: 1.6 }}
+                  required
+                />
+                <p className="text-xs mt-1" style={{ color: "var(--tx-muted)" }}>
+                  Obligatoire — aide le livreur à vous trouver sans appel
+                </p>
+              </div>
             </div>
           )}
 

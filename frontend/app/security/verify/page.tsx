@@ -1,155 +1,277 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, AlertCircle, Wifi } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  Bluetooth, CheckCircle2, XCircle, Scale,
+} from "lucide-react";
 import { receiptsApi } from "@/lib/api";
 
-type VerifyStatus = "idle" | "loading" | "valid" | "invalid" | "already_used" | "error";
+type Phase = "scan" | "verifying" | "bluetooth" | "weighing" | "pass" | "fail";
 
-const STATUS_CONFIG: Record<string, { bg: string; icon: any; title: string }> = {
-  valid: { bg: "var(--s-500)", icon: CheckCircle, title: "✓ REÇU VALIDE" },
-  already_used: { bg: "#F97316", icon: AlertCircle, title: "⚠ DÉJÀ UTILISÉ" },
-  invalid: { bg: "#EF4444", icon: XCircle, title: "✗ REÇU INVALIDE" },
-  error: { bg: "#6B7280", icon: Wifi, title: "Connexion impossible" },
-  loading: { bg: "var(--p-500)", icon: AlertCircle, title: "Vérification..." },
-  idle: { bg: "#1C2540", icon: CheckCircle, title: "Prêt à vérifier" },
-};
+/* GATT UUIDs (Weight Scale profile — Bluetooth SIG 0x181D / 0x2A9D) */
+const GATT_SERVICE    = "0000181d-0000-1000-8000-00805f9b34fb";
+const GATT_CHAR       = "00002a9d-0000-1000-8000-00805f9b34fb";
+const BAG_TARE_G      = 50;      // tare sac standard : 50 g
+const TOLERANCE       = 0.02;    // ±2 %
+
+/* Parse Weight Measurement characteristic value (Bluetooth SIG spec) */
+function parseWeightKg(dv: DataView): number {
+  const flags  = dv.getUint8(0);
+  const isLbs  = (flags & 0x01) !== 0;
+  const raw    = dv.getUint16(1, true);
+  // résolution : 0.005 kg (kg) ou 0.01 lb
+  return isLbs ? (raw * 0.01 * 0.453592) : raw * 0.005;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 
 export default function SecurityVerifyPage() {
-  const [code, setCode] = useState("");
-  const [status, setStatus] = useState<VerifyStatus>("idle");
-  const [receiptData, setReceiptData] = useState<any>(null);
+  const [phase,        setPhase]        = useState<Phase>("scan");
+  const [code,         setCode]         = useState("");
+  const [receiptData,  setReceiptData]  = useState<any>(null);
+  const [liveWeight,   setLiveWeight]   = useState<number | null>(null);
+  const [errorMsg,     setErrorMsg]     = useState("");
+  const charRef = useRef<any>(null);
 
-  const verifyCode = async (verificationCode: string) => {
-    if (!verificationCode.trim()) return;
-    setStatus("loading");
-    setReceiptData(null);
-
+  /* ── 1. Verify QR ────────────────────────────────────────────── */
+  const verifyCode = async (c: string) => {
+    if (!c.trim()) return;
+    setPhase("verifying");
+    setErrorMsg("");
     try {
-      const res = await receiptsApi.verify(verificationCode.trim());
+      const res  = await receiptsApi.verify(c.trim());
       const data = res.data;
-      setStatus(data.valid ? "valid" : "invalid");
+      if (!data.valid) {
+        setErrorMsg(data.message || "Code invalide ou reçu déjà utilisé");
+        setPhase("scan");
+        return;
+      }
       setReceiptData(data);
-    } catch (err: any) {
-      if (err.code === "ERR_NETWORK" || err.code === "ECONNABORTED") {
-        setStatus("error");
-      } else if (err.response?.status === 404) {
-        setStatus("invalid");
-        setReceiptData({ valid: false });
-      } else {
-        setStatus("error");
+      setPhase("bluetooth");
+    } catch (e: any) {
+      setErrorMsg(e.response?.status === 404 ? "Code introuvable" : "Erreur réseau");
+      setPhase("scan");
+    }
+  };
+
+  /* ── 2. Connect Bluetooth scale ──────────────────────────────── */
+  const connectScale = async () => {
+    setErrorMsg("");
+    const bt = (navigator as any).bluetooth;
+    if (!bt) {
+      setErrorMsg("Web Bluetooth non supporté sur ce navigateur (utilisez Chrome/Edge)");
+      return;
+    }
+    try {
+      const device: any = await bt.requestDevice({
+        filters:          [{ services: [GATT_SERVICE] }],
+        optionalServices: [GATT_SERVICE],
+      });
+      const server  = await device.gatt.connect();
+      const service = await server.getPrimaryService(GATT_SERVICE);
+      const char    = await service.getCharacteristic(GATT_CHAR);
+      charRef.current = char;
+      await char.startNotifications();
+      char.addEventListener("characteristicvaluechanged", (e: any) => {
+        setLiveWeight(parseWeightKg(e.target.value as DataView));
+      });
+      /* Lire la valeur initiale si disponible */
+      try {
+        const initial = await char.readValue();
+        setLiveWeight(parseWeightKg(initial));
+      } catch {}
+      setPhase("weighing");
+    } catch (e: any) {
+      if (e.name !== "NotFoundError" && e.name !== "NotAllowedError") {
+        setErrorMsg("Connexion balance échouée — vérifiez l'appairage Bluetooth.");
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    verifyCode(code);
-  };
-
-  const handleReset = () => {
-    setCode("");
-    setStatus("idle");
-    setReceiptData(null);
-  };
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const codeFromUrl = urlParams.get("code");
-    if (codeFromUrl) {
-      setCode(codeFromUrl);
-      verifyCode(codeFromUrl);
+  /* ── 3. Validate weight ──────────────────────────────────────── */
+  const validateWeight = () => {
+    const theoreticalG = receiptData?.total_weight_g ?? 0;
+    if (theoreticalG === 0) {
+      /* Poids théorique absent du backend → validation directe */
+      setPhase("pass");
+      return;
     }
-  }, []);
+    const expectedG  = theoreticalG + BAG_TARE_G;
+    const realG      = (liveWeight ?? 0) * 1000;
+    const withinTol  = Math.abs(realG - expectedG) / expectedG <= TOLERANCE;
+    setPhase(withinTol ? "pass" : "fail");
+  };
 
-  const config = STATUS_CONFIG[status];
-  const Icon = config.icon;
-  const bgColor = status !== "idle" ? config.bg : "#1C2540";
+  /* ── Skip scale (validation sans pesée) ─────────────────────── */
+  const skipScale = () => setPhase("pass");
 
-  return (
-    <div
-      className="min-h-screen transition-colors duration-500"
-      style={{ background: bgColor }}
-    >
-      {/* Header */}
-      <div className="px-6 pt-10 pb-6">
-        <h1 className="text-white text-2xl font-black">Contrôle Sortie</h1>
-        <p className="text-white/60 text-sm mt-1">Agent Sécurité · Fiissa</p>
+  /* ── Reset ──────────────────────────────────────────────────── */
+  const reset = () => {
+    try { charRef.current?.stopNotifications(); } catch {}
+    charRef.current = null;
+    setPhase("scan");
+    setCode("");
+    setReceiptData(null);
+    setLiveWeight(null);
+    setErrorMsg("");
+  };
+
+  /* Auto-fill depuis l'URL (?code=XXXX) */
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("code");
+    if (c) { setCode(c); verifyCode(c); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ════════════════════════════════════════════════════════════
+     ÉCRAN VERT — SORTIE VALIDÉE (plein écran)
+  ════════════════════════════════════════════════════════════ */
+  if (phase === "pass") {
+    return (
+      <div
+        className="fixed inset-0 flex flex-col items-center justify-center gap-6 px-8 text-center"
+        style={{ background: "#10B981" }}
+      >
+        <CheckCircle2 size={96} strokeWidth={1.2} className="text-white" />
+        <div>
+          <p className="text-white font-black leading-none" style={{ fontSize: 52 }}>SORTIE</p>
+          <p className="text-white font-black leading-none mt-1" style={{ fontSize: 52 }}>VALIDÉE</p>
+        </div>
+        {receiptData?.receipt_number && (
+          <p className="text-white/60 text-sm font-mono tracking-widest">{receiptData.receipt_number}</p>
+        )}
+        {receiptData?.amount_xof && (
+          <p className="text-white/80 text-lg font-bold">
+            {receiptData.amount_xof.toLocaleString("fr-FR")} FCFA
+          </p>
+        )}
+        <button
+          onClick={reset}
+          className="mt-4 bg-white rounded-3xl px-10 py-4 font-black text-xl active:scale-95 transition-transform"
+          style={{ color: "#10B981" }}
+        >
+          Contrôle suivant
+        </button>
       </div>
+    );
+  }
 
-      {/* Résultat */}
-      {status !== "idle" && status !== "loading" && (
-        <div className="mx-4 rounded-3xl p-8 text-center mb-6" style={{ background: "rgba(0,0,0,0.20)" }}>
-          <Icon size={80} className="mx-auto text-white mb-4" />
-          <h2 className="text-white text-3xl font-black tracking-wide">{config.title}</h2>
+  /* ════════════════════════════════════════════════════════════
+     ÉCRAN ROUGE — ÉCART DÉTECTÉ (plein écran)
+  ════════════════════════════════════════════════════════════ */
+  if (phase === "fail") {
+    const items: any[]   = receiptData?.items ?? [];
+    const theoreticalG   = receiptData?.total_weight_g ?? 0;
+    const expectedG      = theoreticalG + BAG_TARE_G;
+    const realG          = liveWeight !== null ? Math.round(liveWeight * 1000) : null;
 
-          {receiptData && (
-            <div className="mt-6 text-left rounded-2xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.15)" }}>
-              {receiptData.receipt_number && (
-                <div className="flex justify-between">
-                  <span className="text-white/70 text-sm">N° Reçu</span>
-                  <span className="font-bold text-white text-sm">{receiptData.receipt_number}</span>
-                </div>
-              )}
-              {receiptData.order_number && (
-                <div className="flex justify-between">
-                  <span className="text-white/70 text-sm">Commande</span>
-                  <span className="font-bold text-white text-sm">{receiptData.order_number}</span>
-                </div>
-              )}
-              {receiptData.amount_xof && (
-                <div className="flex justify-between">
-                  <span className="text-white/70 text-sm">Montant</span>
-                  <span className="font-bold text-white text-sm">{receiptData.amount_xof?.toLocaleString("fr-FR")} FCFA</span>
-                </div>
-              )}
-              {receiptData.items_count && (
-                <div className="flex justify-between">
-                  <span className="text-white/70 text-sm">Articles</span>
-                  <span className="font-bold text-white text-sm">{receiptData.items_count} article{receiptData.items_count > 1 ? "s" : ""}</span>
-                </div>
-              )}
-              {receiptData.message && (
-                <p className="text-white/90 text-sm mt-2 text-center font-medium">{receiptData.message}</p>
-              )}
+    return (
+      <div className="fixed inset-0 overflow-auto" style={{ background: "#EF4444" }}>
+        <div className="px-6 pt-14 pb-10 flex flex-col gap-5 min-h-full">
+
+          {/* Titre */}
+          <div className="text-center">
+            <XCircle size={80} strokeWidth={1.2} className="text-white mx-auto mb-4" />
+            <p className="text-white font-black tracking-tight" style={{ fontSize: 42 }}>
+              ÉCART DÉTECTÉ
+            </p>
+          </div>
+
+          {/* Tableau poids */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl py-4 px-4 text-center" style={{ background: "rgba(0,0,0,0.18)" }}>
+              <p className="text-white/60 text-xs mb-1 uppercase tracking-wider">Balance</p>
+              <p className="text-white font-black text-2xl">{realG !== null ? `${realG} g` : "—"}</p>
             </div>
-          )}
+            <div className="rounded-2xl py-4 px-4 text-center" style={{ background: "rgba(0,0,0,0.18)" }}>
+              <p className="text-white/60 text-xs mb-1 uppercase tracking-wider">Attendu ±2%</p>
+              <p className="text-white font-black text-2xl">{expectedG} g</p>
+            </div>
+          </div>
+
+          {/* Liste articles — contrôle visuel */}
+          <div className="rounded-2xl overflow-hidden flex-1" style={{ background: "rgba(0,0,0,0.20)" }}>
+            <p
+              className="px-4 py-3 text-white font-black text-xs uppercase tracking-widest"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              Articles payés · contrôle visuel
+            </p>
+            {items.length === 0 && (
+              <p className="px-4 py-6 text-white/50 text-sm text-center">Détails non disponibles</p>
+            )}
+            {items.map((item: any, i: number) => (
+              <div
+                key={i}
+                className="flex items-center justify-between px-4 py-3.5"
+                style={{ borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.09)" : "none" }}
+              >
+                <p className="text-white font-bold text-sm flex-1 pr-3">
+                  {item.name ?? item.product_name ?? "Article"}
+                </p>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {item.weight_g && (
+                    <span className="text-white/50 text-xs">
+                      {(item.weight_g * (item.quantity ?? 1))} g
+                    </span>
+                  )}
+                  <span className="text-white/80 text-sm font-mono">×{item.quantity ?? 1}</span>
+                </div>
+              </div>
+            ))}
+          </div>
 
           <button
-            onClick={handleReset}
-            className="mt-6 w-full py-4 bg-white rounded-2xl font-black text-lg active:scale-95 transition-transform"
-            style={{ color: "#1C2540" }}
+            onClick={reset}
+            className="w-full rounded-2xl py-4 font-black text-white text-lg active:scale-95 transition-transform"
+            style={{ background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.22)" }}
           >
-            Vérifier un autre reçu
+            Contrôle suivant
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     INTERFACE PRINCIPALE
+  ════════════════════════════════════════════════════════════ */
+  return (
+    <div className="min-h-screen pb-28" style={{ background: "#0F1629" }}>
+
+      {/* Bandeau erreur */}
+      {errorMsg && (
+        <div
+          className="mx-4 mt-4 rounded-2xl px-4 py-3"
+          style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.3)" }}
+        >
+          <p className="text-red-300 text-sm font-bold">{errorMsg}</p>
         </div>
       )}
 
-      {/* Formulaire idle */}
-      {status === "idle" && (
-        <div className="mx-4">
-          <div className="rounded-3xl p-6" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <p className="text-white text-center mb-6 text-base">
-              Entrez le code du reçu ou scannez le QR code
+      {/* ── SCAN ── */}
+      {phase === "scan" && (
+        <div className="px-4 pt-2">
+          <div className="rounded-3xl p-6" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <p className="text-white text-center text-sm mb-5" style={{ opacity: 0.65 }}>
+              Entrez le code QR du reçu client
             </p>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); verifyCode(code); }} className="space-y-4">
               <input
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="Code de vérification"
-                className="w-full py-5 px-4 text-xl text-center font-mono bg-white rounded-2xl outline-none tracking-widest"
-                style={{ color: "#1C2540", border: "2px solid transparent" }}
+                placeholder="CODE DE VÉRIFICATION"
+                className="w-full py-5 px-4 text-center text-xl font-mono bg-white rounded-2xl outline-none tracking-widest"
+                style={{ color: "#0F1629" }}
                 autoFocus
                 autoComplete="off"
-                autoCorrect="off"
                 autoCapitalize="characters"
               />
               <button
                 type="submit"
                 disabled={!code.trim()}
-                className="w-full py-5 bg-white rounded-2xl font-black text-xl disabled:opacity-40 active:scale-95 transition-transform"
-                style={{ color: "#1C2540" }}
+                className="w-full py-5 rounded-2xl font-black text-xl text-white disabled:opacity-40 active:scale-95 transition-transform"
+                style={{ background: "#FF9F00" }}
               >
                 VÉRIFIER
               </button>
@@ -158,23 +280,135 @@ export default function SecurityVerifyPage() {
         </div>
       )}
 
-      {/* Loading */}
-      {status === "loading" && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-16 h-16 border-4 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.3)", borderTopColor: "white" }} />
-          <p className="text-white mt-4 text-lg font-semibold">Vérification en cours...</p>
+      {/* ── VERIFYING ── */}
+      {phase === "verifying" && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div
+            className="w-16 h-16 border-4 rounded-full animate-spin"
+            style={{ borderColor: "rgba(255,159,0,0.25)", borderTopColor: "#FF9F00" }}
+          />
+          <p className="text-white text-lg font-semibold">Vérification du reçu…</p>
         </div>
       )}
 
-      {/* Légende */}
-      <div className="fixed bottom-8 left-4 right-4">
-        <div className="rounded-2xl p-3 grid grid-cols-2 gap-2 text-xs text-white/70" style={{ background: "rgba(0,0,0,0.30)" }}>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ background: "var(--s-500)" }} />Valide</div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-400" />Invalide</div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-400" />Déjà utilisé</div>
-          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-gray-400" />Hors ligne</div>
+      {/* ── BLUETOOTH ── */}
+      {phase === "bluetooth" && (
+        <div className="px-4 space-y-4 pt-2">
+          {/* Reçu valide */}
+          <div
+            className="rounded-2xl px-4 py-3 flex items-center gap-3"
+            style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}
+          >
+            <CheckCircle2 size={18} style={{ color: "#10B981" }} />
+            <div className="min-w-0">
+              <p className="text-white font-bold text-sm">Reçu valide</p>
+              {receiptData?.receipt_number && (
+                <p className="text-white/50 text-xs font-mono truncate">{receiptData.receipt_number}</p>
+              )}
+            </div>
+            {receiptData?.amount_xof && (
+              <p className="text-white font-black ml-auto flex-shrink-0">
+                {receiptData.amount_xof.toLocaleString("fr-FR")} F
+              </p>
+            )}
+          </div>
+
+          {/* Connexion balance */}
+          <div className="rounded-3xl p-7 text-center" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <Bluetooth size={52} className="mx-auto mb-4" style={{ color: "#2257FF" }} />
+            <p className="text-white font-bold text-lg mb-1">Connecter la balance</p>
+            <p className="text-white/50 text-sm mb-6">
+              Appairez la balance électronique du magasin via Bluetooth GATT
+            </p>
+            <button
+              onClick={connectScale}
+              className="w-full py-4 rounded-2xl font-black text-white text-lg mb-3 active:scale-95 transition-transform flex items-center justify-center gap-2"
+              style={{ background: "#2257FF" }}
+            >
+              <Bluetooth size={20} />
+              Connecter la balance
+            </button>
+            <button
+              onClick={skipScale}
+              className="w-full py-3 rounded-xl text-sm font-bold"
+              style={{ color: "rgba(255,255,255,0.35)" }}
+            >
+              Passer la pesée (validation directe)
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── WEIGHING ── */}
+      {phase === "weighing" && (
+        <div className="px-4 space-y-4 pt-2">
+          {/* Affichage poids en direct */}
+          <div className="rounded-3xl p-8 text-center" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <Scale size={40} className="mx-auto mb-4" style={{ color: "#FF9F00", opacity: 0.75 }} />
+            <p className="text-white/50 text-xs mb-2 uppercase tracking-widest">Poids mesuré</p>
+            <p
+              className="text-white font-black leading-none"
+              style={{ fontSize: 72 }}
+            >
+              {liveWeight !== null ? Math.round(liveWeight * 1000) : "—"}
+            </p>
+            <p className="text-white/50 text-xl font-bold mt-2">grammes</p>
+          </div>
+
+          {/* Référence backend */}
+          {receiptData?.total_weight_g ? (
+            <div
+              className="rounded-2xl px-4 py-3 grid grid-cols-2 gap-2 text-center"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              <div>
+                <p className="text-white/40 text-xs mb-0.5">Panier théorique</p>
+                <p className="text-white font-bold">{receiptData.total_weight_g} g</p>
+              </div>
+              <div>
+                <p className="text-white/40 text-xs mb-0.5">Attendu + sac (±2%)</p>
+                <p className="text-white font-bold">{receiptData.total_weight_g + BAG_TARE_G} g</p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl px-4 py-3 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <p className="text-white/40 text-xs">Poids théorique non communiqué — validation directe disponible</p>
+            </div>
+          )}
+
+          <button
+            onClick={validateWeight}
+            disabled={liveWeight === null}
+            className="w-full py-5 rounded-2xl font-black text-white text-xl disabled:opacity-40 active:scale-95 transition-transform"
+            style={{ background: "#FF9F00" }}
+          >
+            VALIDER LE POIDS
+          </button>
+        </div>
+      )}
+
+      {/* Légende fixe en bas */}
+      {(phase === "scan" || phase === "bluetooth" || phase === "weighing") && (
+        <div className="fixed bottom-8 left-4 right-4">
+          <div
+            className="rounded-2xl p-3 grid grid-cols-2 gap-2 text-xs"
+            style={{ background: "rgba(255,255,255,0.05)" }}
+          >
+            <div className="flex items-center gap-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#10B981" }} />Conforme
+            </div>
+            <div className="flex items-center gap-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#EF4444" }} />Écart détecté
+            </div>
+            <div className="flex items-center gap-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#2257FF" }} />Balance connectée
+            </div>
+            <div className="flex items-center gap-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#6B7280" }} />Hors ligne
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
