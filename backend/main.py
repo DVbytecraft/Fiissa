@@ -193,6 +193,29 @@ async def debug_tables(db: AsyncSession = Depends(get_db)):
     return {"tables": tables, "count": len(tables)}
 
 
+@app.get("/debug/migrate", tags=["System"])
+async def debug_migrate():
+    """Temporary diagnostic: run alembic upgrade head and return output."""
+    import subprocess, shutil, os
+    alembic_path = shutil.which("alembic") or "/usr/local/bin/alembic"
+    db_url_masked = settings.DATABASE_URL[:30] + "..." if settings.DATABASE_URL else "NOT SET"
+    db_sync_masked = settings.database_url_sync[:30] + "..." if settings.database_url_sync else "NOT SET"
+    result = subprocess.run(
+        [alembic_path, "upgrade", "head"],
+        capture_output=True, text=True, timeout=120,
+        cwd="/app",
+    )
+    return {
+        "alembic_path": alembic_path,
+        "alembic_exists": os.path.exists(alembic_path),
+        "db_url_async": db_url_masked,
+        "db_url_sync": db_sync_masked,
+        "returncode": result.returncode,
+        "stdout": result.stdout[-3000:],
+        "stderr": result.stderr[-3000:],
+    }
+
+
 @app.get("/", tags=["System"])
 async def root():
     return {"message": "Fiissa API", "docs": "/docs"}
