@@ -103,7 +103,16 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     if settings.DEBUG:
-        raise exc
+        import traceback
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "code": "debug_error",
+                "type": type(exc).__name__,
+                "message": str(exc)[:500],
+                "traceback": traceback.format_exc()[-2000:],
+            },
+        )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"code": "internal_error", "message": "Internal server error"},
