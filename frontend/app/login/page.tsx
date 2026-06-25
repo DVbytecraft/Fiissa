@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -116,44 +115,43 @@ function LoginPageContent() {
 
           {/* Logo F sur fond blanc arrondi */}
           <div
-            className="flex items-center justify-center rounded-3xl"
-            style={{ background: "#FFFFFF", width: 120, height: 120, padding: 16 }}
+            className="flex items-center justify-center rounded-3xl overflow-hidden"
+            style={{ background: "#FFFFFF", width: 110, height: 110 }}
           >
-            <Image
-              src="/icons/1.png"
-              alt="Fiissa"
-              width={88}
-              height={88}
-              priority
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/3.png" alt="Fiissa" style={{ width: 88, height: 88, objectFit: "contain" }} />
           </div>
 
-          {/* Wordmark + slogan */}
+          {/* Wordmark */}
           <p className="mt-5 text-3xl font-semibold tracking-tight" style={{ color: "#FFFFFF", letterSpacing: "-0.02em" }}>
             fiissa
           </p>
-          <p className="mt-1 text-xs font-medium tracking-[0.18em] uppercase" style={{ color: "#00D68F" }}>
-            Shop faster. Live better.
+
+          {/* Slogan */}
+          <p className="mt-1 text-xs font-medium tracking-[0.14em]" style={{ color: "#00D68F" }}>
+            Shop faster, live better
           </p>
 
           {/* Divider */}
-          <div className="mt-10 w-12 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
+          <div className="mt-10 w-10 h-px" style={{ background: "rgba(255,255,255,0.15)" }} />
 
           {/* Titre B2B */}
-          <h1
-            className="mt-8 text-2xl font-semibold leading-snug"
-            style={{ color: "#FFFFFF" }}
-          >
+          <h1 className="mt-8 text-xl font-semibold leading-snug" style={{ color: "#FFFFFF" }}>
             Gérez vos flux de vente en toute simplicité.
           </h1>
 
-          {/* Description */}
-          <p
-            className="mt-4 text-sm leading-7"
-            style={{ color: "#E2E8F0", opacity: 0.75 }}
-          >
-            Fiissa centralise le Scan &amp; Go, le Click &amp; Collect et le contrôle de sécurité pour optimiser l'efficacité de votre établissement.
-          </p>
+          {/* Fonctionnalités clés */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {["Scan & Go", "Click & Collect", "Contrôle sécurité"].map((f) => (
+              <span
+                key={f}
+                className="px-3 py-1 rounded-full text-xs font-medium"
+                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.60)", border: "1px solid rgba(255,255,255,0.10)" }}
+              >
+                {f}
+              </span>
+            ))}
+          </div>
         </div>
       </aside>
 
@@ -165,17 +163,11 @@ function LoginPageContent() {
 
           {/* Logo mobile uniquement */}
           <div className="lg:hidden flex flex-col items-center mb-8">
-            <Image
-              src="/icons/1.png"
-              alt="Fiissa"
-              width={72}
-              height={72}
-              className="rounded-2xl"
-              priority
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/3.png" alt="Fiissa" style={{ width: 64, height: 64, objectFit: "contain" }} />
             <p className="mt-2 text-xl font-semibold tracking-tight" style={{ color: "#0F172A" }}>fiissa</p>
-            <p className="text-[10px] font-medium tracking-[0.16em] uppercase mt-0.5" style={{ color: "#94A3B8" }}>
-              Shop faster. Live better.
+            <p className="text-[10px] font-medium tracking-[0.14em] mt-0.5" style={{ color: "#94A3B8" }}>
+              Shop faster, live better
             </p>
           </div>
 
