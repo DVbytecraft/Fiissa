@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, Receipt, User, Zap } from "lucide-react";
+import { Home, Package, Receipt, ScanLine, User } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 
 const NAV = [
   { href: "/",        icon: Home,    label: "Accueil"   },
   { href: "/orders",  icon: Package, label: "Commandes" },
-  { href: "/scan",    icon: Zap,     label: "Scan & Go", accent: true },
+  { href: "/scan",    icon: ScanLine, label: "Scan & Go", accent: true },
   { href: "/receipts",icon: Receipt, label: "Reçus"     },
   { href: "/account", icon: User,    label: "Compte"    },
 ];
@@ -44,11 +44,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </span>
         </Link>
 
-        {/* Panier — Bleu officiel logo */}
+        {/* Panier — pilule arrondie */}
         <Link
           href="/cart"
-          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-black text-white transition-all active:scale-95"
+          className="relative flex items-center gap-1.5 px-4 rounded-full text-sm font-black text-white transition-all active:scale-95"
           style={{
+            height: 34,
             background: "var(--p-500)",
             boxShadow: "0 4px 12px rgba(34,87,255,0.28)",
           }}

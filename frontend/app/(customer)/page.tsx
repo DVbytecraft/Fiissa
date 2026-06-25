@@ -82,10 +82,11 @@ function StoreCard({ store }: { store: any }) {
           {/* Distance badge */}
           {distanceLabel && (
             <div
-              className="absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs font-bold text-white"
+              className="absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs font-bold text-white flex items-center gap-1"
               style={{ background: "rgba(0,0,0,0.48)", backdropFilter: "blur(8px)" }}
             >
-              📍 {distanceLabel}
+              <MapPin size={10} strokeWidth={1.8} className="flex-shrink-0" />
+              {distanceLabel}
             </div>
           )}
 
@@ -176,7 +177,7 @@ export default function HomePage() {
         )}
 
         <h1 className="text-[28px] font-black leading-tight tracking-tight" style={{ color: "#111111" }}>
-          Bonjour 👋
+          Bonjour
         </h1>
         <p className="text-base mt-1 font-medium" style={{ color: "var(--tx-muted)" }}>
           Que voulez-vous faire aujourd'hui ?
@@ -218,15 +219,31 @@ export default function HomePage() {
 
       {/* ── Liste des commerces ── */}
       <section className="px-5 pt-5 pb-8">
-        <div className="flex items-end justify-between mb-4">
+        <div className="flex items-end justify-between mb-5">
           <div>
-            <p className="section-label">À proximité</p>
-            <h2 className="text-xl font-black mt-0.5" style={{ color: "#111111" }}>
+            {/* Étiquette de section avec icône */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <MapPin size={13} strokeWidth={1.5} style={{ color: "var(--tx-muted)" }} />
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.13em]"
+                style={{ color: "var(--tx-muted)" }}
+              >
+                À proximité
+              </p>
+            </div>
+            {/* Titre fin — pas gras, élégant */}
+            <h2
+              className="text-2xl font-semibold leading-tight tracking-tight"
+              style={{ color: "#111111", letterSpacing: "-0.02em" }}
+            >
               Commerces disponibles
             </h2>
           </div>
           {!isLoading && allStores && (
-            <span className="text-sm" style={{ color: "var(--tx-muted)" }}>
+            <span
+              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "var(--n-100)", color: "var(--tx-muted)" }}
+            >
               {stores.length} résultat{stores.length > 1 ? "s" : ""}
             </span>
           )}
@@ -245,18 +262,18 @@ export default function HomePage() {
           {!isLoading && stores.map((store: any) => <StoreCard key={store.id} store={store} />)}
 
           {!isLoading && allStores?.length === 0 && (
-            <div className="py-16 text-center">
-              <ShoppingBag size={48} className="mx-auto mb-4" style={{ color: "var(--n-300)" }} />
-              <p className="font-bold" style={{ color: "#111111" }}>Aucun commerce disponible</p>
-              <p className="text-sm mt-1" style={{ color: "var(--tx-muted)" }}>Reviens bientôt !</p>
+            <div className="py-20 text-center">
+              <ShoppingBag size={44} strokeWidth={1.2} className="mx-auto mb-4" style={{ color: "#64748B" }} />
+              <p className="font-semibold text-base" style={{ color: "#111111" }}>Aucun commerce disponible</p>
+              <p className="text-sm mt-1 font-medium" style={{ color: "#64748B" }}>Reviens bientôt !</p>
             </div>
           )}
 
           {!isLoading && allStores?.length > 0 && stores.length === 0 && search && (
-            <div className="py-16 text-center">
-              <Search size={48} className="mx-auto mb-4" style={{ color: "var(--n-300)" }} />
-              <p className="font-black" style={{ color: "#111111" }}>Aucun résultat</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
+            <div className="py-20 text-center">
+              <Search size={44} strokeWidth={1.2} className="mx-auto mb-4" style={{ color: "#64748B" }} />
+              <p className="font-semibold text-base" style={{ color: "#111111" }}>Aucun résultat</p>
+              <p className="mt-1 text-sm font-medium" style={{ color: "#64748B" }}>
                 Essaie un autre nom ou une autre ville.
               </p>
             </div>
