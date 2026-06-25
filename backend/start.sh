@@ -1,5 +1,5 @@
 #!/bin/bash
-# No set -e: we keep the container alive even if alembic fails.
+# No set -e: keep the container alive even if alembic or seeding fails.
 # Uvicorn must stay up so Render's health check keeps passing.
 
 echo "[start.sh] Starting Uvicorn..."
@@ -27,8 +27,17 @@ alembic upgrade head
 ALEMBIC_EXIT=$?
 if [ "$ALEMBIC_EXIT" = "0" ]; then
   echo "[start.sh] Migrations OK"
+
+  echo "[start.sh] Seeding superadmin..."
+  python -m scripts.seed_superadmin
+  SEED_EXIT=$?
+  if [ "$SEED_EXIT" = "0" ]; then
+    echo "[start.sh] Seeding OK"
+  else
+    echo "[start.sh] WARNING: Seeding exited with code $SEED_EXIT"
+  fi
 else
-  echo "[start.sh] ERROR: Alembic exited with code $ALEMBIC_EXIT — keeping container alive"
+  echo "[start.sh] ERROR: Alembic exited with code $ALEMBIC_EXIT — skipping seed"
 fi
 
 echo "[start.sh] Starting Celery worker..."
