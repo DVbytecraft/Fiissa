@@ -114,15 +114,27 @@ function LoginPageContent() {
       >
         <div className="w-full max-w-sm flex flex-col items-center text-center">
 
-          {/* Logo app complet — fond sombre intégré */}
-          <Image
-            src="/icons/2.png"
-            alt="Fiissa"
-            width={200}
-            height={200}
-            className="rounded-3xl"
-            priority
-          />
+          {/* Logo F sur fond blanc arrondi */}
+          <div
+            className="flex items-center justify-center rounded-3xl"
+            style={{ background: "#FFFFFF", width: 120, height: 120, padding: 16 }}
+          >
+            <Image
+              src="/icons/1.png"
+              alt="Fiissa"
+              width={88}
+              height={88}
+              priority
+            />
+          </div>
+
+          {/* Wordmark + slogan */}
+          <p className="mt-5 text-3xl font-semibold tracking-tight" style={{ color: "#FFFFFF", letterSpacing: "-0.02em" }}>
+            fiissa
+          </p>
+          <p className="mt-1 text-xs font-medium tracking-[0.18em] uppercase" style={{ color: "#00D68F" }}>
+            Shop faster. Live better.
+          </p>
 
           {/* Divider */}
           <div className="mt-10 w-12 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
