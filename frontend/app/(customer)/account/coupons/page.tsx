@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -30,7 +30,7 @@ function CouponQrModal({ code, onClose }: { code: string; onClose: () => void })
           <QrCode size={20} style={{ color: "var(--p-500)" }} />
         </div>
         <p className="font-bold text-base mb-1" style={{ color: "var(--tx-head)" }}>Code coupon</p>
-        <p className="font-mono text-xl font-black mb-4 tracking-widest" style={{ color: "var(--p-500)" }}>{code}</p>
+        <p className="font-mono text-xl font-semibold mb-4 tracking-widest" style={{ color: "var(--p-500)" }}>{code}</p>
         {qrDataUrl ? (
           <img src={qrDataUrl} alt="QR coupon" className="w-44 h-44 rounded-2xl" style={{ border: "4px solid white", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }} />
         ) : (
@@ -85,7 +85,7 @@ export default function CouponsPage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Mes coupons</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Mes coupons</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
             {available.length} disponible{available.length > 1 ? "s" : ""}
           </p>
@@ -167,7 +167,7 @@ export default function CouponsPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <Tag size={14} style={{ color: "var(--p-500)" }} />
-                        <p className="font-black text-xl" style={{ color: coupon.is_used ? "var(--tx-muted)" : "var(--p-500)" }}>
+                        <p className="font-semibold text-xl" style={{ color: coupon.is_used ? "var(--tx-muted)" : "var(--p-500)" }}>
                           {discountText}
                         </p>
                       </div>

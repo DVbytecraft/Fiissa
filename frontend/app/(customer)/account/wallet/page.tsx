@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -45,7 +45,7 @@ function OperatorPicker({ selected, onSelect }: { selected: string; onSelect: (v
               style={{ borderBottom: i < OPERATORS.length - 1 ? "1px solid var(--bd)" : "none" }}
             >
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-black"
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
                 style={{ background: op.color }}
               >
                 {op.label[0]}
@@ -113,7 +113,7 @@ function AddSheet({ onClose, existingCount }: { onClose: () => void; existingCou
         </div>
 
         <div className="px-5 py-3 flex items-center justify-between">
-          <h2 className="text-xl font-black" style={{ color: "#111111" }}>Ajouter un numéro</h2>
+          <h2 className="text-xl font-semibold" style={{ color: "#111111" }}>Ajouter un numéro</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -225,7 +225,7 @@ export default function WalletPage() {
           <ArrowLeft size={18} style={{ color: "#111111" }} />
         </Link>
         <div className="flex-1">
-          <p className="font-black text-base" style={{ color: "#111111" }}>Wallet</p>
+          <p className="font-semibold text-base" style={{ color: "#111111" }}>Wallet</p>
           <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Vos moyens de paiement</p>
         </div>
         <button
@@ -273,7 +273,7 @@ export default function WalletPage() {
                   style={{ borderBottom: i < mobileMethods.length - 1 ? "1px solid var(--bd)" : "none" }}
                 >
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm"
                     style={{ background: op.color }}
                   >
                     {op.label[0]}
@@ -286,7 +286,7 @@ export default function WalletPage() {
                       </p>
                       {method.is_default && (
                         <span
-                          className="flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full text-white"
+                          className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
                           style={{ background: "#111111" }}
                         >
                           Défaut

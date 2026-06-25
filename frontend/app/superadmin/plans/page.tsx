@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +65,7 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
         style={{ background: "#FFFFFF", maxHeight: "90dvh" }}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <h2 className="text-xl font-black" style={{ color: "#111111" }}>Nouveau plan</h2>
+          <h2 className="text-xl font-semibold" style={{ color: "#111111" }}>Nouveau plan</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -186,7 +186,7 @@ export default function SuperAdminPlansPage() {
               <CreditCard size={20} style={{ color: "var(--p-500)" }} />
             </div>
             <div>
-              <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Plans</h1>
+              <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Plans</h1>
               <p className="text-xs" style={{ color: "var(--tx-muted)" }}>{plans.length} plan{plans.length > 1 ? "s" : ""} disponible{plans.length > 1 ? "s" : ""}</p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function SuperAdminPlansPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-black text-base" style={{ color: "#111111" }}>{plan.name}</p>
+                    <p className="font-semibold text-base" style={{ color: "#111111" }}>{plan.name}</p>
                     <span
                       className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full"
                       style={{ background: "var(--n-100)", color: "var(--tx-muted)" }}
@@ -258,7 +258,7 @@ export default function SuperAdminPlansPage() {
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-black text-lg" style={{ color: "#111111" }}>
+                  <p className="font-semibold text-lg" style={{ color: "#111111" }}>
                     {plan.amount_xof === 0 ? "Gratuit" : `${(plan.amount_xof ?? 0).toLocaleString("fr-FR")} F`}
                   </p>
                   <p className="text-[10px]" style={{ color: "var(--tx-muted)" }}>

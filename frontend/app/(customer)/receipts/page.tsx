@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -142,14 +142,14 @@ export default function ReceiptsPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-black" style={{ color: "var(--tx-head)" }}>
+                  <p className="font-semibold" style={{ color: "var(--tx-head)" }}>
                     {receipt.receipt_number}
                   </p>
                   <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
                     {receipt.store_name || "Fiissa"} · {receipt.order_number || "Commande"}
                   </p>
                 </div>
-                <p className="font-black flex-shrink-0" style={{ color: "var(--tx-head)" }}>
+                <p className="font-semibold flex-shrink-0" style={{ color: "var(--tx-head)" }}>
                   {receipt.total_xof?.toLocaleString("fr-FR")} FCFA
                 </p>
               </div>

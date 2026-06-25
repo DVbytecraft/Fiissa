@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -72,7 +72,7 @@ export default function RewardsPage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
             Récompenses
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -137,7 +137,7 @@ export default function RewardsPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs" style={{ opacity: 0.7 }}>Points disponibles</p>
-                  <p className="text-2xl font-black">{card.points_balance.toLocaleString("fr-FR")}</p>
+                  <p className="text-2xl font-semibold">{card.points_balance.toLocaleString("fr-FR")}</p>
                 </div>
               </div>
 
@@ -197,7 +197,7 @@ export default function RewardsPage() {
                           )}
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="font-black text-lg" style={{ color: canRedeem ? "var(--s-500)" : "var(--tx-muted)" }}>
+                          <p className="font-semibold text-lg" style={{ color: canRedeem ? "var(--s-500)" : "var(--tx-muted)" }}>
                             {reward.points_cost.toLocaleString("fr-FR")}
                           </p>
                           <p className="text-[10px]" style={{ color: "var(--tx-muted)" }}>pts</p>

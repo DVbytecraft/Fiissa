@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -109,13 +109,13 @@ function CustomerDetail({ query }: { query: string }) {
         style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
       >
         <div
-          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl font-black"
+          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl font-semibold"
           style={{ background: "var(--n-100)", color: "#111111" }}
         >
           {customerName[0]?.toUpperCase() ?? "?"}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-black text-base" style={{ color: "#111111" }}>{customerName}</p>
+          <p className="font-semibold text-base" style={{ color: "#111111" }}>{customerName}</p>
           {customerPhone && (
             <div className="flex items-center gap-1.5 mt-0.5">
               <Phone size={12} style={{ color: "var(--tx-muted)" }} />
@@ -124,7 +124,7 @@ function CustomerDetail({ query }: { query: string }) {
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="font-black text-lg" style={{ color: "#111111" }}>{orders.length}</p>
+          <p className="font-semibold text-lg" style={{ color: "#111111" }}>{orders.length}</p>
           <p className="text-xs" style={{ color: "var(--tx-muted)" }}>commandes</p>
         </div>
       </div>
@@ -250,7 +250,7 @@ export default function CallCenterPage() {
             <Phone size={20} style={{ color: "var(--p-500)" }} />
           </div>
           <div>
-            <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Call Center</h1>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Call Center</h1>
             <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Recherche client · Vue lecture seule</p>
           </div>
         </div>

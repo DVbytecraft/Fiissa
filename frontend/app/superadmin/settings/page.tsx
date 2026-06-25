@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -81,11 +81,11 @@ export default function SuperAdminSettingsPage() {
       <div className="px-5 pt-6 pb-5" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }}>
         <div className="flex items-center gap-2 mb-1">
           <Settings size={16} style={{ color: "var(--p-500)" }} />
-          <span className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
             Configuration
           </span>
         </div>
-        <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>Paramètres plateforme</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>Paramètres plateforme</h1>
         <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
           Gouvernance globale Fiissa — plans, sécurité, notifications.
         </p>

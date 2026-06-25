@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -280,7 +280,7 @@ export default function CartPage() {
                 className="input-mobile"
               />
               <div>
-                <label className="text-xs font-black uppercase tracking-wide flex items-center gap-1 mb-1.5" style={{ color: "var(--tx-muted)" }}>
+                <label className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1 mb-1.5" style={{ color: "var(--tx-muted)" }}>
                   Indications et repères pour le livreur
                   <span style={{ color: "#EF4444" }}>*</span>
                 </label>

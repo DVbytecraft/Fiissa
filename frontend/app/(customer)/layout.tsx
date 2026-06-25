@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,9 +37,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: "var(--fiissa-gradient)" }}
           >
-            <span className="text-white font-black text-sm">F</span>
+            <span className="text-white font-semibold text-sm">F</span>
           </div>
-          <span className="font-black text-lg tracking-tight" style={{ color: "var(--tx-head)" }}>
+          <span className="font-semibold text-lg tracking-tight" style={{ color: "var(--tx-head)" }}>
             Fiissa
           </span>
         </Link>
@@ -47,7 +47,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         {/* Panier — pilule arrondie */}
         <Link
           href="/cart"
-          className="relative flex items-center gap-1.5 px-4 rounded-full text-sm font-black text-white transition-all active:scale-95"
+          className="relative flex items-center gap-1.5 px-4 rounded-full text-sm font-semibold text-white transition-all active:scale-95"
           style={{
             height: 34,
             background: "var(--p-500)",
@@ -60,7 +60,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           Panier
           {itemCount > 0 && (
             <span
-              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-black text-white"
+              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-semibold text-white"
               style={{ background: "#111111" }}
             >
               {itemCount > 9 ? "9+" : itemCount}

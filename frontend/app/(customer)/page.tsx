@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -92,7 +92,7 @@ function StoreCard({ store }: { store: any }) {
 
           {/* Store name overlay */}
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-            <h3 className="text-white font-black text-xl leading-tight truncate">{store.name}</h3>
+            <h3 className="text-white font-semibold text-xl leading-tight truncate">{store.name}</h3>
             {store.address?.city && (
               <p className="text-white/70 text-sm mt-0.5">{store.address.city}</p>
             )}
@@ -205,7 +205,7 @@ export default function HomePage() {
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
               style={{ background: "var(--n-300)", color: "white" }}
             >
               ×
@@ -254,7 +254,7 @@ export default function HomePage() {
 
           {error && (
             <div className="rounded-2xl p-5 text-center" style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}>
-              <p className="font-black" style={{ color: "#DC2626" }}>Connexion impossible</p>
+              <p className="font-semibold" style={{ color: "#DC2626" }}>Connexion impossible</p>
               <p className="mt-1 text-sm" style={{ color: "#EF4444" }}>Vérifie ta connexion puis recharge.</p>
             </div>
           )}

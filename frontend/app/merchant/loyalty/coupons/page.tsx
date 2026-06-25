@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -55,7 +55,7 @@ export default function MerchantLoyaltyCouponsPage() {
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Coupons</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Coupons</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
             Émettre des coupons de réduction pour vos clients
           </p>
@@ -114,7 +114,7 @@ export default function MerchantLoyaltyCouponsPage() {
                           {score.segment} · {score.order_count} cmd · {score.total_spent_xof.toLocaleString("fr-FR")} F
                         </p>
                       </div>
-                      <span className="font-black text-base" style={{ color: "var(--p-500)" }}>
+                      <span className="font-semibold text-base" style={{ color: "var(--p-500)" }}>
                         {score.rfm_score}/15
                       </span>
                     </button>

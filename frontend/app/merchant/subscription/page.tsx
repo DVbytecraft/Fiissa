@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -204,7 +204,7 @@ export default function MerchantSubscriptionPage() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p style={{ color: "var(--tx-head)" }} className="text-xl font-black">
+                        <p style={{ color: "var(--tx-head)" }} className="text-xl font-semibold">
                           {plan.price.toLocaleString("fr-FR")} F
                         </p>
                         <p style={{ color: "var(--tx-muted)" }} className="text-xs">
@@ -277,7 +277,7 @@ export default function MerchantSubscriptionPage() {
                       Statut: {invoice.status}
                     </p>
                   </div>
-                  <p style={{ color: "var(--p-500)" }} className="font-black text-base">
+                  <p style={{ color: "var(--p-500)" }} className="font-semibold text-base">
                     {(invoice.total_xof ?? invoice.amount_xof ?? 0).toLocaleString("fr-FR")} F
                   </p>
                 </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -91,7 +91,7 @@ export default function AuditLogsPage() {
             <Shield size={20} style={{ color: "#7C3AED" }} />
           </div>
           <div>
-            <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Audit Logs</h1>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Audit Logs</h1>
             <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
               {filtered.length} événement{filtered.length > 1 ? "s" : ""}
             </p>
@@ -173,7 +173,7 @@ export default function AuditLogsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className="text-xs font-black px-2 py-0.5 rounded-full font-mono"
+                        className="text-xs font-semibold px-2 py-0.5 rounded-full font-mono"
                         style={{ background: style.bg, color: style.color }}
                       >
                         {log.action}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -133,8 +133,8 @@ export default function SecurityVerifyPage() {
       >
         <CheckCircle2 size={96} strokeWidth={1.2} className="text-white" />
         <div>
-          <p className="text-white font-black leading-none" style={{ fontSize: 52 }}>SORTIE</p>
-          <p className="text-white font-black leading-none mt-1" style={{ fontSize: 52 }}>VALIDÉE</p>
+          <p className="text-white font-semibold leading-none" style={{ fontSize: 52 }}>SORTIE</p>
+          <p className="text-white font-semibold leading-none mt-1" style={{ fontSize: 52 }}>VALIDÉE</p>
         </div>
         {receiptData?.receipt_number && (
           <p className="text-white/60 text-sm font-mono tracking-widest">{receiptData.receipt_number}</p>
@@ -146,7 +146,7 @@ export default function SecurityVerifyPage() {
         )}
         <button
           onClick={reset}
-          className="mt-4 bg-white rounded-3xl px-10 py-4 font-black text-xl active:scale-95 transition-transform"
+          className="mt-4 bg-white rounded-3xl px-10 py-4 font-semibold text-xl active:scale-95 transition-transform"
           style={{ color: "#10B981" }}
         >
           Contrôle suivant
@@ -171,7 +171,7 @@ export default function SecurityVerifyPage() {
           {/* Titre */}
           <div className="text-center">
             <XCircle size={80} strokeWidth={1.2} className="text-white mx-auto mb-4" />
-            <p className="text-white font-black tracking-tight" style={{ fontSize: 42 }}>
+            <p className="text-white font-semibold tracking-tight" style={{ fontSize: 42 }}>
               ÉCART DÉTECTÉ
             </p>
           </div>
@@ -180,18 +180,18 @@ export default function SecurityVerifyPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl py-4 px-4 text-center" style={{ background: "rgba(0,0,0,0.18)" }}>
               <p className="text-white/60 text-xs mb-1 uppercase tracking-wider">Balance</p>
-              <p className="text-white font-black text-2xl">{realG !== null ? `${realG} g` : "—"}</p>
+              <p className="text-white font-semibold text-2xl">{realG !== null ? `${realG} g` : "—"}</p>
             </div>
             <div className="rounded-2xl py-4 px-4 text-center" style={{ background: "rgba(0,0,0,0.18)" }}>
               <p className="text-white/60 text-xs mb-1 uppercase tracking-wider">Attendu ±2%</p>
-              <p className="text-white font-black text-2xl">{expectedG} g</p>
+              <p className="text-white font-semibold text-2xl">{expectedG} g</p>
             </div>
           </div>
 
           {/* Liste articles — contrôle visuel */}
           <div className="rounded-2xl overflow-hidden flex-1" style={{ background: "rgba(0,0,0,0.20)" }}>
             <p
-              className="px-4 py-3 text-white font-black text-xs uppercase tracking-widest"
+              className="px-4 py-3 text-white font-semibold text-xs uppercase tracking-widest"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}
             >
               Articles payés · contrôle visuel
@@ -222,7 +222,7 @@ export default function SecurityVerifyPage() {
 
           <button
             onClick={reset}
-            className="w-full rounded-2xl py-4 font-black text-white text-lg active:scale-95 transition-transform"
+            className="w-full rounded-2xl py-4 font-semibold text-white text-lg active:scale-95 transition-transform"
             style={{ background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.22)" }}
           >
             Contrôle suivant
@@ -270,7 +270,7 @@ export default function SecurityVerifyPage() {
               <button
                 type="submit"
                 disabled={!code.trim()}
-                className="w-full py-5 rounded-2xl font-black text-xl text-white disabled:opacity-40 active:scale-95 transition-transform"
+                className="w-full py-5 rounded-2xl font-semibold text-xl text-white disabled:opacity-40 active:scale-95 transition-transform"
                 style={{ background: "#FF9F00" }}
               >
                 VÉRIFIER
@@ -307,7 +307,7 @@ export default function SecurityVerifyPage() {
               )}
             </div>
             {receiptData?.amount_xof && (
-              <p className="text-white font-black ml-auto flex-shrink-0">
+              <p className="text-white font-semibold ml-auto flex-shrink-0">
                 {receiptData.amount_xof.toLocaleString("fr-FR")} F
               </p>
             )}
@@ -322,7 +322,7 @@ export default function SecurityVerifyPage() {
             </p>
             <button
               onClick={connectScale}
-              className="w-full py-4 rounded-2xl font-black text-white text-lg mb-3 active:scale-95 transition-transform flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-2xl font-semibold text-white text-lg mb-3 active:scale-95 transition-transform flex items-center justify-center gap-2"
               style={{ background: "#2257FF" }}
             >
               <Bluetooth size={20} />
@@ -347,7 +347,7 @@ export default function SecurityVerifyPage() {
             <Scale size={40} className="mx-auto mb-4" style={{ color: "#FF9F00", opacity: 0.75 }} />
             <p className="text-white/50 text-xs mb-2 uppercase tracking-widest">Poids mesuré</p>
             <p
-              className="text-white font-black leading-none"
+              className="text-white font-semibold leading-none"
               style={{ fontSize: 72 }}
             >
               {liveWeight !== null ? Math.round(liveWeight * 1000) : "—"}
@@ -379,7 +379,7 @@ export default function SecurityVerifyPage() {
           <button
             onClick={validateWeight}
             disabled={liveWeight === null}
-            className="w-full py-5 rounded-2xl font-black text-white text-xl disabled:opacity-40 active:scale-95 transition-transform"
+            className="w-full py-5 rounded-2xl font-semibold text-white text-xl disabled:opacity-40 active:scale-95 transition-transform"
             style={{ background: "#FF9F00" }}
           >
             VALIDER LE POIDS

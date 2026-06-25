@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,12 +39,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: "var(--fiissa-gradient)" }}
           >
-            <span className="text-white font-black text-base">F</span>
+            <span className="text-white font-semibold text-base">F</span>
           </div>
           <div className="min-w-0">
-            <p className="text-white font-black text-sm leading-none">Fiissa</p>
+            <p className="text-white font-semibold text-sm leading-none">Fiissa</p>
             <span
-              className="mt-1 inline-block text-[10px] font-black px-2 py-0.5 rounded-full"
+              className="mt-1 inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full"
               style={{ background: "#EAB308", color: "#713F12" }}
             >
               Super Admin
@@ -54,7 +54,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <p className="px-3 mb-3 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.3)" }}>
             Plateforme
           </p>
           {NAV.map(({ href, icon: Icon, label }) => {
@@ -104,12 +104,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ background: "var(--fiissa-gradient)" }}
             >
-              <span className="text-white font-black text-sm">F</span>
+              <span className="text-white font-semibold text-sm">F</span>
             </div>
             <div>
-              <span className="text-white font-black text-base">Fiissa</span>
+              <span className="text-white font-semibold text-base">Fiissa</span>
               <span
-                className="ml-2 text-[10px] font-black px-2 py-0.5 rounded-full"
+                className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full"
                 style={{ background: "#EAB308", color: "#713F12" }}
               >
                 Super Admin

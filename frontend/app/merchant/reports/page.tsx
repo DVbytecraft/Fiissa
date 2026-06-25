@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -79,7 +79,7 @@ function StatCard({ label, value, icon, iconBg, sub }: {
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: iconBg }}>
         {icon}
       </div>
-      <p className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>{value}</p>
+      <p className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>{value}</p>
       <p className="mt-0.5 text-sm" style={{ color: "var(--tx-muted)" }}>{label}</p>
       {sub && <p className="mt-1 text-xs opacity-70" style={{ color: "var(--tx-muted)" }}>{sub}</p>}
     </div>
@@ -183,7 +183,7 @@ export default function MerchantReportsPage() {
       {/* ─── Header ─── */}
       <div style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }} className="px-5 pt-5 pb-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Rapports</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Rapports</h1>
           <div className="flex gap-2">
             <button
               onClick={() => handleExport("csv")}
@@ -351,7 +351,7 @@ export default function MerchantReportsPage() {
               {data.top_products.map((product: any, i: number) => (
                 <div key={product.product_id || i} className="flex items-center gap-3">
                   <div
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
                     style={{ background: i === 0 ? "#111111" : "var(--n-300)" }}
                   >
                     {i + 1}
@@ -403,19 +403,19 @@ export default function MerchantReportsPage() {
             <h2 className="font-bold text-sm mb-3" style={{ color: "var(--tx-head)" }}>Qualité de service</h2>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-xl font-black" style={{ color: "var(--s-500)" }}>
+                <p className="text-xl font-semibold" style={{ color: "var(--s-500)" }}>
                   {data.orders_count > 0 ? Math.round(((data.orders_delivered || 0) / data.orders_count) * 100) : 0}%
                 </p>
                 <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Taux de livraison</p>
               </div>
               <div>
-                <p className="text-xl font-black" style={{ color: "#EF4444" }}>
+                <p className="text-xl font-semibold" style={{ color: "#EF4444" }}>
                   {data.orders_cancelled || 0}
                 </p>
                 <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Annulées</p>
               </div>
               <div>
-                <p className="text-xl font-black" style={{ color: "var(--p-500)" }}>
+                <p className="text-xl font-semibold" style={{ color: "var(--p-500)" }}>
                   {data.orders_delivered || 0}
                 </p>
                 <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Livrées</p>

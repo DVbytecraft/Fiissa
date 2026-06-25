@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -44,7 +44,7 @@ function KpiCard({
         {href && <ChevronRight size={16} style={{ color: "var(--bd)" }} />}
       </div>
       <div className="mt-3">
-        <p className="text-2xl font-black" style={{ color: urgent ? "#DC2626" : "var(--tx-head)" }}>
+        <p className="text-2xl font-semibold" style={{ color: urgent ? "#DC2626" : "var(--tx-head)" }}>
           {value}
         </p>
         <p className="text-sm mt-0.5 font-medium" style={{ color: "var(--tx-muted)" }}>{label}</p>
@@ -133,10 +133,10 @@ export default function MerchantDashboard() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
               {todayLabel()}
             </p>
-            <h1 className="mt-1 text-2xl font-black leading-tight" style={{ color: "var(--tx-head)" }}>
+            <h1 className="mt-1 text-2xl font-semibold leading-tight" style={{ color: "var(--tx-head)" }}>
               {greeting()}, {firstName} 👋
             </h1>
             <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -151,7 +151,7 @@ export default function MerchantDashboard() {
             <Bell size={18} style={{ color: hasUnread ? "#D97706" : "var(--tx-muted)" }} />
             {hasUnread && (
               <span
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-semibold text-white"
                 style={{ background: "#D97706" }}
               >
                 {notifSummary.unread_count > 9 ? "9+" : notifSummary.unread_count}
@@ -197,7 +197,7 @@ export default function MerchantDashboard() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={14} style={{ color: "var(--p-500)" }} />
-            <h2 className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
               Aujourd'hui
             </h2>
           </div>
@@ -214,7 +214,7 @@ export default function MerchantDashboard() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Clock size={14} style={{ color: "#F59E0B" }} />
-                <h2 className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
                   À préparer
                 </h2>
               </div>
@@ -260,7 +260,7 @@ export default function MerchantDashboard() {
 
         {/* ── Liens rapides ─────────────────────────────────────────── */}
         <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.16em] mb-3" style={{ color: "var(--tx-muted)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] mb-3" style={{ color: "var(--tx-muted)" }}>
             Accès rapide
           </h2>
           <div className="grid grid-cols-3 gap-2">

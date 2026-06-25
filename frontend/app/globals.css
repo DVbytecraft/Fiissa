@@ -120,19 +120,27 @@
   body {
     background-color: var(--bg-app);
     color: var(--tx-head);
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.55;
+    font-weight: 400;
     overscroll-behavior: none;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  p { font-weight: 400; }
 }
 
 /* ─── Composants ────────────────────────────────────────────────── */
 @layer components {
 
-  /* ── Bouton action Orange — Scan & Go, Panier, Payer ─────────── */
+  /* ── Bouton action Orange — portail marchand ─────────────────── */
   .btn-action {
-    @apply w-full flex items-center justify-center gap-2 py-4 px-6;
-    @apply rounded-2xl font-black text-base text-white;
+    @apply w-full flex items-center justify-center gap-2 py-2.5 px-5;
+    @apply rounded-lg font-medium text-sm text-white;
     @apply transition-all duration-150 active:scale-95 select-none;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--color-action);
@@ -142,8 +150,8 @@
 
   /* ── Bouton primaire Bleu Fiissa ─────────────────────────────── */
   .btn-primary {
-    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
-    @apply rounded-xl font-semibold text-sm text-white;
+    @apply w-full flex items-center justify-center gap-2 py-2.5 px-5;
+    @apply rounded-lg font-medium text-sm text-white;
     @apply transition-all duration-150 active:scale-95 select-none;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--p-500);
@@ -153,8 +161,8 @@
 
   /* ── Bouton vert succès ──────────────────────────────────────── */
   .btn-success {
-    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
-    @apply rounded-xl font-semibold text-sm text-white;
+    @apply w-full flex items-center justify-center gap-2 py-2.5 px-5;
+    @apply rounded-lg font-medium text-sm text-white;
     @apply transition-all duration-150 active:scale-95 select-none;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--s-500);
@@ -162,10 +170,10 @@
   }
   .btn-success:not(:disabled):hover { background: var(--s-600); }
 
-  /* ── Bouton secondaire outline noir ─────────────────────────── */
+  /* ── Bouton secondaire outline ───────────────────────────────── */
   .btn-secondary {
-    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
-    @apply rounded-xl font-semibold text-sm border;
+    @apply w-full flex items-center justify-center gap-2 py-2.5 px-5;
+    @apply rounded-lg font-medium text-sm border;
     @apply transition-all duration-150 active:scale-95 select-none;
     background: var(--n-0);
     color: var(--tx-head);
@@ -175,8 +183,8 @@
 
   /* ── Bouton danger ───────────────────────────────────────────── */
   .btn-danger {
-    @apply w-full flex items-center justify-center gap-2 py-3 px-5;
-    @apply rounded-xl font-semibold text-sm border;
+    @apply w-full flex items-center justify-center gap-2 py-2.5 px-5;
+    @apply rounded-lg font-medium text-sm border;
     @apply transition-all duration-150 active:scale-95 select-none;
     background: var(--error-bg);
     color: var(--error);
@@ -185,7 +193,7 @@
 
   /* ── Input mobile épuré ──────────────────────────────────────── */
   .input-mobile {
-    @apply w-full py-3 px-4 text-sm outline-none transition-all;
+    @apply w-full py-2.5 px-3.5 text-sm outline-none transition-all;
     background: var(--n-50);
     border: 1.5px solid var(--bd);
     border-radius: var(--r-xl);
@@ -222,7 +230,7 @@
     overflow: hidden;
   }
   .ios-list-item {
-    @apply flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors cursor-pointer;
+    @apply flex items-center gap-3 px-4 py-3 active:bg-gray-50 transition-colors cursor-pointer;
   }
   .ios-list-item + .ios-list-item {
     border-top: 1px solid var(--bg-layout);
@@ -233,7 +241,7 @@
 
   /* ── Segmented control ───────────────────────────────────────── */
   .segmented-chip {
-    @apply shrink-0 rounded-full px-4 py-2 text-sm font-bold transition-all;
+    @apply shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all;
     background: var(--n-100);
     color: var(--tx-muted);
     border: 1px solid transparent;
@@ -247,17 +255,17 @@
   /* ── Labels ──────────────────────────────────────────────────── */
   .field-label {
     display: block;
-    margin-bottom: 0.45rem;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    margin-bottom: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--tx-muted);
   }
   .section-label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--tx-muted);
   }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -48,7 +48,7 @@ function CreateEmployeeModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h3 style={{ color: "var(--tx-head)" }} className="text-xl font-black">
+            <h3 style={{ color: "var(--tx-head)" }} className="text-xl font-semibold">
               Ajouter un employé
             </h3>
             <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -177,9 +177,9 @@ export default function MerchantEmployeesPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <User size={15} style={{ color: "var(--p-500)" }} />
-              <span className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>Gestion</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>Gestion</span>
             </div>
-            <h1 style={{ color: "var(--tx-head)" }} className="text-2xl font-black">
+            <h1 style={{ color: "var(--tx-head)" }} className="text-2xl font-semibold">
               Équipe
             </h1>
             <p style={{ color: "var(--tx-muted)" }} className="text-sm mt-0.5">

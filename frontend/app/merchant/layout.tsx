@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -50,7 +50,7 @@ function SidebarLink({ href, icon: Icon, label, pathname, v2 }: { href: string; 
       <span>{label}</span>
       {v2 && !active && (
         <span
-          className="ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full"
+          className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
           style={{ background: "rgba(245,158,11,0.12)", color: "#D97706" }}
         >
           V2
@@ -95,10 +95,10 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: "var(--fiissa-gradient)" }}
           >
-            <span className="text-white font-black text-base">F</span>
+            <span className="text-white font-semibold text-base">F</span>
           </div>
           <div className="min-w-0">
-            <p className="font-black text-sm leading-none" style={{ color: "var(--tx-head)" }}>Fiissa</p>
+            <p className="font-semibold text-sm leading-none" style={{ color: "var(--tx-head)" }}>Fiissa</p>
             <span
               className="mt-1 inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full"
               style={{ background: "var(--p-50)", color: "var(--p-600)" }}
@@ -110,7 +110,7 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
 
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-          <p className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--tx-muted)" }}>
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--tx-muted)" }}>
             Principal
           </p>
           {PRIMARY_NAV.map((item) => (
@@ -119,7 +119,7 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
 
           <div className="my-4 mx-3" style={{ borderTop: "1px solid var(--bd)" }} />
 
-          <p className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--tx-muted)" }}>
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--tx-muted)" }}>
             Gestion
           </p>
           {SECONDARY_NAV.map((item) => (
@@ -153,10 +153,10 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
               className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ background: "var(--fiissa-gradient)" }}
             >
-              <span className="text-white font-black text-sm">F</span>
+              <span className="text-white font-semibold text-sm">F</span>
             </div>
             <div>
-              <span className="font-black text-base" style={{ color: "var(--tx-head)" }}>Fiissa</span>
+              <span className="font-semibold text-base" style={{ color: "var(--tx-head)" }}>Fiissa</span>
               <span
                 className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={{ background: "var(--p-50)", color: "var(--p-600)" }}
@@ -216,7 +216,7 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
                       <span className="text-[10px] font-semibold text-center leading-tight">{label}</span>
                       {v2 && !active && (
                         <span
-                          className="absolute top-1.5 right-1.5 text-[8px] font-black px-1 py-0.5 rounded-full"
+                          className="absolute top-1.5 right-1.5 text-[8px] font-semibold px-1 py-0.5 rounded-full"
                           style={{ background: "rgba(245,158,11,0.15)", color: "#D97706" }}
                         >
                           V2

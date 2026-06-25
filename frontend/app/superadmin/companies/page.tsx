@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -84,7 +84,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+            <h2 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
               Creer une entreprise
             </h2>
             <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -205,18 +205,18 @@ export default function SuperAdminCompaniesPage() {
           <div className="absolute right-10 bottom-0 h-16 w-16 rounded-full bg-white/10" />
           <div className="relative flex items-start justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]">
                 <Sparkles size={14} />
                 Pilotage plateforme
               </div>
-              <h1 className="mt-4 text-3xl font-black leading-tight">Entreprises Fiissa</h1>
+              <h1 className="mt-4 text-3xl font-semibold leading-tight">Entreprises Fiissa</h1>
               <p className="mt-2 text-sm text-white/75">
                 Recherche, creation et supervision des comptes marchands.
               </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="shrink-0 rounded-2xl px-4 py-3 text-sm font-black"
+              className="shrink-0 rounded-2xl px-4 py-3 text-sm font-semibold"
               style={{ background: "rgba(255,255,255,0.95)", color: "#0D1227" }}
             >
               <span className="inline-flex items-center gap-2">
@@ -240,7 +240,7 @@ export default function SuperAdminCompaniesPage() {
               },
             ].map(({ label, value, color, bg }) => (
               <div key={label} className="rounded-2xl p-3 text-center" style={{ background: bg }}>
-                <p className="text-xl font-black" style={{ color }}>{value}</p>
+                <p className="text-xl font-semibold" style={{ color }}>{value}</p>
                 <p className="mt-0.5 text-xs" style={{ color: "rgba(100,116,139,0.9)" }}>{label}</p>
               </div>
             ))}
@@ -267,7 +267,7 @@ export default function SuperAdminCompaniesPage() {
             {label}
             {badge != null && badge > 0 && (
               <span
-                className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black"
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold"
                 style={{ background: "rgba(245,158,11,0.2)", color: "#D97706" }}
               >
                 {badge}
@@ -310,7 +310,7 @@ export default function SuperAdminCompaniesPage() {
                   <Building2 size={22} style={{ color: "#D97706" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-black text-sm" style={{ color: "var(--tx-head)" }}>{req.company_name}</p>
+                  <p className="font-semibold text-sm" style={{ color: "var(--tx-head)" }}>{req.company_name}</p>
                   <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>
                     {req.contact_email} {req.contact_phone ? `· ${req.contact_phone}` : ""}
                   </p>
@@ -427,7 +427,7 @@ export default function SuperAdminCompaniesPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p style={{ color: "var(--tx-head)" }} className="font-black text-sm truncate">
+                      <p style={{ color: "var(--tx-head)" }} className="font-semibold text-sm truncate">
                         {company.name}
                       </p>
                       <span

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,7 +64,7 @@ function CreateStaffModal({ onClose, companies }: { onClose: () => void; compani
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Créer un utilisateur</h2>
+            <h2 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Créer un utilisateur</h2>
             <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
               Compte staff ou superadmin sur la plateforme Fiissa.
             </p>
@@ -184,11 +184,11 @@ export default function SuperAdminUsersPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Shield size={16} style={{ color: "var(--p-500)" }} />
-              <span className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+              <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
                 Gestion des accès
               </span>
             </div>
-            <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>Utilisateurs</h1>
+            <h1 className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>Utilisateurs</h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
               {data?.total ?? "…"} compte{(data?.total ?? 0) > 1 ? "s" : ""} sur la plateforme
             </p>
@@ -289,7 +289,7 @@ export default function SuperAdminUsersPage() {
             >
               {/* Avatar initiales */}
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center font-black text-white text-sm shrink-0"
+                className="w-11 h-11 rounded-full flex items-center justify-center font-semibold text-white text-sm shrink-0"
                 style={{ background: avatarColor(user.first_name || user.email || "") }}
               >
                 {initials}

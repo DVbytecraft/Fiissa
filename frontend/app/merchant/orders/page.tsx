@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -113,7 +113,7 @@ function MerchantOrdersPageContent() {
     <div style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
       <div className="pb-0" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }}>
         <div className="px-5 pt-4 pb-3">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Commandes</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Commandes</h1>
         </div>
 
         {/* Tabs */}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -192,7 +192,7 @@ export default function AccountPage() {
         <div className="flex items-center gap-4">
           {/* Avatar initiales */}
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl flex-shrink-0"
+            className="w-16 h-16 rounded-full flex items-center justify-center font-semibold text-2xl flex-shrink-0"
             style={{ background: "var(--n-100)", color: "var(--tx-head)" }}
           >
             {initials}
@@ -318,7 +318,7 @@ export default function AccountPage() {
                   </div>
                   {unreadCount > 0 && label === "Notifications" && (
                     <span
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white mr-2"
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white mr-2"
                       style={{ background: "var(--color-action)" }}
                     >
                       {unreadCount}

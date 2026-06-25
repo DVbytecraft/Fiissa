@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -116,12 +116,12 @@ export default function RegisterPage() {
         </button>
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold"
             style={{ background: "var(--fiissa-gradient)" }}
           >
             F
           </div>
-          <span className="font-black text-lg" style={{ color: "var(--tx-head)" }}>Fiissa</span>
+          <span className="font-semibold text-lg" style={{ color: "var(--tx-head)" }}>Fiissa</span>
         </div>
         {/* Étapes */}
         <div className="ml-auto flex items-center gap-1.5">
@@ -146,7 +146,7 @@ export default function RegisterPage() {
         {step === "type" && (
           <>
             <div>
-              <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+              <h1 className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>
                 Créer un compte
               </h1>
               <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -172,7 +172,7 @@ export default function RegisterPage() {
                     <User size={22} style={{ color: accountType === "customer" ? "#fff" : "var(--tx-muted)" }} />
                   </div>
                   <div>
-                    <p className="font-black text-base" style={{ color: "var(--tx-head)" }}>
+                    <p className="font-semibold text-base" style={{ color: "var(--tx-head)" }}>
                       Compte Client
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                       background: accountType === "customer" ? "var(--p-500)" : "transparent",
                     }}
                   >
-                    {accountType === "customer" && <span className="text-white text-[10px] font-black">✓</span>}
+                    {accountType === "customer" && <span className="text-white text-[10px] font-semibold">✓</span>}
                   </div>
                 </div>
               </button>
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                     <Building2 size={22} style={{ color: accountType === "company" ? "#fff" : "var(--tx-muted)" }} />
                   </div>
                   <div>
-                    <p className="font-black text-base" style={{ color: "var(--tx-head)" }}>
+                    <p className="font-semibold text-base" style={{ color: "var(--tx-head)" }}>
                       Compte Entreprise
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -222,7 +222,7 @@ export default function RegisterPage() {
                       background: accountType === "company" ? "var(--s-500)" : "transparent",
                     }}
                   >
-                    {accountType === "company" && <span className="text-white text-[10px] font-black">✓</span>}
+                    {accountType === "company" && <span className="text-white text-[10px] font-semibold">✓</span>}
                   </div>
                 </div>
               </button>
@@ -246,7 +246,7 @@ export default function RegisterPage() {
 
             <p className="text-center text-sm" style={{ color: "var(--tx-muted)" }}>
               Déjà un compte ?{" "}
-              <Link href="/login" className="font-black" style={{ color: "var(--p-500)" }}>
+              <Link href="/login" className="font-semibold" style={{ color: "var(--p-500)" }}>
                 Se connecter
               </Link>
             </p>
@@ -257,7 +257,7 @@ export default function RegisterPage() {
         {step === "info" && (
           <>
             <div>
-              <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+              <h1 className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>
                 {accountType === "customer" ? "Vos informations" : "Informations de l'entreprise"}
               </h1>
               <p className="mt-1 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -271,7 +271,7 @@ export default function RegisterPage() {
             {accountType === "company" && (
               <>
                 <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
                     Nom de l'entreprise *
                   </label>
                   <div className="relative">
@@ -288,7 +288,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
                     Type d'activité *
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -318,7 +318,7 @@ export default function RegisterPage() {
                   className="h-px w-full"
                   style={{ background: "var(--bd)" }}
                 />
-                <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--tx-muted)" }}>
                   Responsable du compte
                 </p>
               </>
@@ -412,7 +412,7 @@ export default function RegisterPage() {
         {step === "otp" && (
           <>
             <div>
-              <h1 className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>
+              <h1 className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>
                 Vérifiez votre email
               </h1>
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--tx-muted)" }}>
@@ -433,7 +433,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--tx-muted)" }}>
                 Code à 6 chiffres
               </label>
               <input

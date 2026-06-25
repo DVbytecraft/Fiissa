@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -146,7 +146,7 @@ export default function MerchantNotificationsPage() {
               <Sparkles size={14} />
               Centre notifications
             </div>
-            <h1 className="mt-4 text-3xl font-black leading-tight">
+            <h1 className="mt-4 text-3xl font-semibold leading-tight">
               Messages, templates et traces d'envoi
             </h1>
             <p className="mt-2 max-w-xl text-sm text-white/80">
@@ -158,12 +158,12 @@ export default function MerchantNotificationsPage() {
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-3xl bg-white/90 p-4 text-slate-900 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Non lues</p>
-            <p className="mt-2 text-3xl font-black">{summary?.unread_count ?? 0}</p>
+            <p className="mt-2 text-3xl font-semibold">{summary?.unread_count ?? 0}</p>
             <p className="mt-1 text-sm text-slate-500">a traiter par l'equipe</p>
           </div>
           <div className="rounded-3xl bg-slate-950/85 p-4 text-white shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">Events</p>
-            <p className="mt-2 text-3xl font-black">{events.length}</p>
+            <p className="mt-2 text-3xl font-semibold">{events.length}</p>
             <p className="mt-1 text-sm text-white/70">sur le dernier chargement</p>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function MerchantNotificationsPage() {
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                  <h2 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                     Boite de reception
                   </h2>
                   <p className="text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -229,7 +229,7 @@ export default function MerchantNotificationsPage() {
                 style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
               >
                 <Bell size={56} className="mx-auto mb-4" style={{ color: "var(--bd)" }} />
-                <p className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                <p className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                   Aucune notification pour le moment
                 </p>
                 <p className="mt-2 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -266,12 +266,12 @@ export default function MerchantNotificationsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="truncate text-sm font-black" style={{ color: "var(--tx-head)" }}>
+                      <p className="truncate text-sm font-semibold" style={{ color: "var(--tx-head)" }}>
                         {notification.title}
                       </p>
                       {!notification.is_read && (
                         <span
-                          className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
                           style={{ background: "var(--p-500)", color: "white" }}
                         >
                           Nouveau
@@ -303,7 +303,7 @@ export default function MerchantNotificationsPage() {
               style={{ background: "var(--bg-card)", border: "1px solid var(--bd)", boxShadow: "var(--sh-sm)" }}
             >
               <div className="mb-4">
-                <h2 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                <h2 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                   Composer un template
                 </h2>
                 <p className="text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -390,7 +390,7 @@ export default function MerchantNotificationsPage() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                  <h3 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                     Templates existants
                   </h3>
                   <p className="text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -430,7 +430,7 @@ export default function MerchantNotificationsPage() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-black" style={{ color: "var(--tx-head)" }}>
+                          <p className="truncate text-sm font-semibold" style={{ color: "var(--tx-head)" }}>
                             {formatEventLabel(template.event_key)}
                           </p>
                           <p className="mt-1 text-xs uppercase tracking-[0.12em]" style={{ color: "var(--tx-muted)" }}>
@@ -438,7 +438,7 @@ export default function MerchantNotificationsPage() {
                           </p>
                         </div>
                         <span
-                          className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
                           style={{
                             background: template.is_active ? "rgba(0,214,143,0.1)" : "rgba(239,68,68,0.08)",
                             color: template.is_active ? "var(--s-600)" : "var(--error)",
@@ -472,7 +472,7 @@ export default function MerchantNotificationsPage() {
                   <MessageSquareText size={20} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                  <h2 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                     Journal des evenements
                   </h2>
                   <p className="text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -520,7 +520,7 @@ export default function MerchantNotificationsPage() {
                 style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
               >
                 <TriangleAlert size={52} className="mx-auto mb-4" style={{ color: "var(--bd)" }} />
-                <p className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+                <p className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
                   Aucun evenement sur ce filtre
                 </p>
                 <p className="mt-2 text-sm" style={{ color: "var(--tx-muted)" }}>
@@ -537,7 +537,7 @@ export default function MerchantNotificationsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-black" style={{ color: "var(--tx-head)" }}>
+                        <p className="text-sm font-semibold" style={{ color: "var(--tx-head)" }}>
                           {formatEventLabel(event.event_key)}
                         </p>
                         <p className="mt-1 text-xs uppercase tracking-[0.12em]" style={{ color: "var(--tx-muted)" }}>
@@ -545,7 +545,7 @@ export default function MerchantNotificationsPage() {
                         </p>
                       </div>
                       <span
-                        className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+                        className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
                         style={{
                           background:
                             event.status === "failed"

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -199,7 +199,7 @@ export default function LoyaltyPage() {
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
             Fidélité
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
@@ -405,7 +405,7 @@ function CardItem({
               {isNative ? "Points" : "Carte référencée"}
             </p>
             {isNative ? (
-              <p className="text-3xl font-black">{card.points_balance.toLocaleString("fr-FR")}</p>
+              <p className="text-3xl font-semibold">{card.points_balance.toLocaleString("fr-FR")}</p>
             ) : (
               <p className="text-lg font-bold">{card.external_issuer}</p>
             )}

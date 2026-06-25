@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "var(--bg-app)" }}>
       <div className="w-full max-w-md rounded-3xl p-6 shadow-lg" style={{ background: "var(--bg-card)" }}>
-        <h1 className="text-2xl font-black mb-2" style={{ color: "var(--tx-head)" }}>Mot de passe oublie</h1>
+        <h1 className="text-2xl font-semibold mb-2" style={{ color: "var(--tx-head)" }}>Mot de passe oublie</h1>
         <p className="text-sm mb-5" style={{ color: "var(--tx-muted)" }}>
           Saisissez votre email pour recevoir un lien de reinitialisation.
         </p>

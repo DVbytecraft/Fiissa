@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -274,7 +274,7 @@ function TiersTab() {
       <div className="space-y-2">
         {tiers.sort((a, b) => a.min_points - b.min_points).map((tier, i) => (
           <div key={tier.id} className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0" style={{ background: "rgba(245,158,11,0.1)", color: "#D97706" }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0" style={{ background: "rgba(245,158,11,0.1)", color: "#D97706" }}>
               {i + 1}
             </div>
             <div className="flex-1">
@@ -533,7 +533,7 @@ function TemplatesTab() {
             <div className="p-4 relative overflow-hidden" style={{ background: t.background_color, color: t.text_color, minHeight: 80 }}>
               <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
               <p className="font-mono text-xs mb-1" style={{ opacity: 0.6 }}>•••• •••• 0000</p>
-              <p className="font-black text-lg">Fiissa Card</p>
+              <p className="font-semibold text-lg">Fiissa Card</p>
               {t.is_default && (
                 <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}>Défaut</span>
               )}
@@ -562,7 +562,7 @@ export default function MerchantLoyaltyPage() {
           <ArrowLeft size={18} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Fidélité</h1>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Fidélité</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>Gérez vos programmes clients</p>
         </div>
         <Link

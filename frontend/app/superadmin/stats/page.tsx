@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { superadminApi } from "@/lib/api";
@@ -10,7 +10,7 @@ function StatBox({ label, value, icon: Icon, color }: any) {
       <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: color + "18" }}>
         <Icon size={20} style={{ color }} />
       </div>
-      <p className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>{value ?? "—"}</p>
+      <p className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>{value ?? "—"}</p>
       <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>{label}</p>
     </div>
   );
@@ -33,14 +33,14 @@ export default function SuperAdminStatsPage() {
             </div>
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-black leading-tight">Statistiques plateforme</h1>
+                <h1 className="text-3xl font-semibold leading-tight">Statistiques plateforme</h1>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-white/75">
                   Vue consolidée Fiissa sur l&apos;activité marchande, les utilisateurs et la performance commerciale.
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 px-4 py-3 text-right backdrop-blur-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">Etat</p>
-                <p className="mt-1 inline-flex items-center gap-2 text-sm font-black">
+                <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold">
                   <ShieldCheck size={16} />
                   Plateforme active
                 </p>
@@ -81,7 +81,7 @@ export default function SuperAdminStatsPage() {
 
         {!isLoading && stats && (
           <div className="surface-card mt-4 p-5">
-            <h2 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+            <h2 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
               Lecture rapide
             </h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -55,7 +55,7 @@ function PaymentCard({ payment, onAction }: { payment: any; onAction: () => void
           <p className="text-xs" style={{ color: "var(--tx-muted)" }}>Commande en attente</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-black" style={{ color: "var(--tx-head)" }}>{payment.amount_xof?.toLocaleString("fr-FR")}</p>
+          <p className="text-2xl font-semibold" style={{ color: "var(--tx-head)" }}>{payment.amount_xof?.toLocaleString("fr-FR")}</p>
           <p className="text-xs" style={{ color: "var(--tx-muted)" }}>FCFA</p>
         </div>
       </div>
@@ -164,7 +164,7 @@ export default function MerchantPaymentsPage() {
       <div className="px-5 pt-4 pb-4" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--bd)" }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Paiements à vérifier</h1>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Paiements à vérifier</h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
               {payments?.length || 0} en attente
             </p>

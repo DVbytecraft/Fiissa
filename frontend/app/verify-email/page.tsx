@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useEffect } from "react";
 import Link from "next/link";
@@ -39,7 +39,7 @@ function VerifyEmailContent() {
   return (
     <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "var(--bg-app)" }}>
       <div className="w-full max-w-md rounded-3xl p-6 shadow-lg text-center" style={{ background: "var(--bg-card)" }}>
-        <h1 className="text-2xl font-black mb-2" style={{ color: "var(--tx-head)" }}>Verification email</h1>
+        <h1 className="text-2xl font-semibold mb-2" style={{ color: "var(--tx-head)" }}>Verification email</h1>
         <p className="text-sm mb-5" style={{ color: "var(--tx-muted)" }}>
           {mutation.isPending
             ? "Verification en cours..."

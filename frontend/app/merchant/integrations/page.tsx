@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -231,7 +231,7 @@ function ApiKeySection() {
             <Key size={20} className="text-white" />
           </div>
           <div>
-            <p className="text-white font-black">Clé API Fiissa</p>
+            <p className="text-white font-semibold">Clé API Fiissa</p>
             <p className="text-white/60 text-xs">Connexion ERP · POS · API externe</p>
           </div>
         </div>
@@ -310,7 +310,7 @@ function ApiKeySection() {
           {ENDPOINT_DOCS.map((ep) => (
             <div key={ep.path} className="flex items-start gap-3 py-2" style={{ borderBottom: "1px solid var(--bg-app)" }}>
               <span
-                className="shrink-0 text-xs font-black px-2 py-0.5 rounded-md mt-0.5"
+                className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-md mt-0.5"
                 style={{
                   background: ep.method === "GET" ? "rgba(34,87,255,0.08)" : "rgba(0,214,143,0.08)",
                   color: ep.method === "GET" ? "var(--p-500)" : "var(--s-500)",

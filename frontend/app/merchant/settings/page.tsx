@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -49,7 +49,7 @@ function SectionCard({
   return (
     <section className="surface-card p-5">
       <div className="mb-5">
-        <h2 className="text-lg font-black" style={{ color: "var(--tx-head)" }}>
+        <h2 className="text-lg font-semibold" style={{ color: "var(--tx-head)" }}>
           {title}
         </h2>
         <p className="mt-1 text-sm leading-6" style={{ color: "var(--tx-muted)" }}>
@@ -310,14 +310,14 @@ export default function MerchantSettingsPage() {
             </div>
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-black leading-tight">Parametres de votre espace</h1>
+                <h1 className="text-3xl font-semibold leading-tight">Parametres de votre espace</h1>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-white/75">
                   Reglez la boutique, les paiements, le catalogue, les horaires et les flags fonctionnels depuis un seul endroit.
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 px-4 py-3 text-right backdrop-blur-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">Boutique</p>
-                <p className="mt-1 text-sm font-black">{storeName || "Non renseignee"}</p>
+                <p className="mt-1 text-sm font-semibold">{storeName || "Non renseignee"}</p>
               </div>
             </div>
           </div>
@@ -502,7 +502,7 @@ export default function MerchantSettingsPage() {
                   return (
                     <div key={day.key} className="surface-card p-3">
                       <div className="flex items-center gap-3">
-                        <p className="w-10 text-sm font-black" style={{ color: "var(--tx-head)" }}>
+                        <p className="w-10 text-sm font-semibold" style={{ color: "var(--tx-head)" }}>
                           {day.label}
                         </p>
                         <input type="time" value={hours.open} onChange={(e) => handleHoursChange(day.key, "open", e.target.value)} className="input-mobile flex-1 py-3 text-center" />

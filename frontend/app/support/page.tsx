@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,7 +56,7 @@ export default function SupportPage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>
             Aide & Support
           </h1>
           <p className="text-sm" style={{ color: "var(--tx-muted)" }}>

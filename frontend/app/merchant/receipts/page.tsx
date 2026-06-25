@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -39,7 +39,7 @@ export default function MerchantReceiptsPage() {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-black" style={{ color: "var(--tx-head)" }}>Reçus</h1>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--tx-head)" }}>Reçus</h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--tx-muted)" }}>
               {data?.total || 0} reçu{(data?.total || 0) > 1 ? "s" : ""}
             </p>
@@ -131,7 +131,7 @@ export default function MerchantReceiptsPage() {
 
               {/* Montant */}
               <div className="text-right shrink-0">
-                <p className="font-black text-base" style={{ color: "var(--p-500)" }}>
+                <p className="font-semibold text-base" style={{ color: "var(--p-500)" }}>
                   {receipt.total_xof?.toLocaleString("fr-FR")} F
                 </p>
                 {receipt.is_verified && (
