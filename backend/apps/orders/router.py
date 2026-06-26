@@ -195,6 +195,10 @@ async def get_merchant_orders(
                 "type": o.type,
                 "total_xof": o.total_xof,
                 "customer_name": o.customer.full_name if o.customer else "Client",
+                "customer_first_name": o.customer.first_name if o.customer else None,
+                "customer_last_name": o.customer.last_name if o.customer else None,
+                "customer_phone": o.customer.phone if o.customer else None,
+                "customer_email": o.customer.email if o.customer else None,
                 "items_count": len(o.items),
                 "created_at": o.created_at.isoformat(),
             }

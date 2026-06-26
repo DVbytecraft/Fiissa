@@ -225,11 +225,17 @@ class Pickup(Base, TimestampMixin):
 
     def build_delegate_message(self, customer_full_name: str, order_number: str) -> str:
         """Génère le message pré-rédigé pour le personnel de l'enseigne."""
+        id_labels = {
+            "carte_identite": "carte d'identité",
+            "passeport": "passeport",
+            "permis": "permis de conduire",
+            "photo": "photo d'identité",
+        }
+        id_label = id_labels.get(self.delegate_id_type or "", "pièce d'identité")
         return (
             f"Bonjour, je suis {self.delegate_first_name} {self.delegate_last_name} "
             f"et je viens récupérer la commande #{order_number} pour le compte de "
-            f"{customer_full_name}. Je peux vous présenter ma pièce d'identité "
-            f"({'carte d\'identité' if self.delegate_id_type == 'carte_identite' else self.delegate_id_type or 'document'}) "
+            f"{customer_full_name}. Je peux vous présenter mon {id_label} "
             f"pour vérification."
         )
 
