@@ -130,11 +130,11 @@ export const superadminApi = {
   deactivateUser: (userId: string) => api.patch(`/users/${userId}/deactivate`),
   reactivateUser: (userId: string) => api.patch(`/users/${userId}/reactivate`),
   getRegistrationRequests: (params?: Record<string, any>) =>
-    api.get("/superadmin/registration-requests", { params }),
+    api.get("/companies/registration-requests", { params }),
   approveRegistrationRequest: (requestId: string) =>
-    api.post(`/superadmin/registration-requests/${requestId}/approve`),
+    api.post(`/companies/registration-requests/${requestId}/approve`),
   rejectRegistrationRequest: (requestId: string, reason?: string) =>
-    api.post(`/superadmin/registration-requests/${requestId}/reject`, { reason }),
+    api.post(`/companies/registration-requests/${requestId}/reject`, { reason }),
   getAuditLogs: (params?: { company_id?: string; action?: string; limit?: number }) =>
     api.get("/superadmin/audit-logs", { params }),
   createPlan: (data: { code: string; name: string; billing_cycle: string; amount_xof: number; commission_rate: number; features?: Record<string, any> }) =>

@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +39,20 @@ class CreateStaffRequest(BaseModel):
     last_name: str
     role: str
     company_id: Optional[UUID] = None
+
+
+class CreateCompanyWithOwnerRequest(BaseModel):
+    company_name: str
+    company_type: str
+    country: str = "SN"
+    currency: str = "XOF"
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    owner_email: str
+    owner_password: str
+    owner_first_name: str
+    owner_last_name: str
+    owner_phone: Optional[str] = None
 
 
 class CreatePlanRequest(BaseModel):
@@ -245,6 +262,95 @@ async def create_staff_user(
     db.add(log)
 
     return {"id": str(user.id), "email": user.email, "role": data.role}
+
+
+@router.post("/companies", summary="Créer une entreprise avec son propriétaire (superadmin)")
+async def create_company_with_owner(
+    data: CreateCompanyWithOwnerRequest,
+    current_user=Depends(require_permission("*")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Superadmin : crée une entreprise + son compte company_owner en une seule opération."""
+    from core.security import hash_password
+    from apps.companies.models import Company, Subscription
+
+    try:
+        from python_slugify import slugify
+        base_slug = slugify(data.company_name)
+    except ModuleNotFoundError:
+        import re as _re
+        base_slug = _re.sub(r"[^a-z0-9]+", "-", data.company_name.lower().strip()).strip("-")
+
+    slug_result = await db.execute(select(Company).where(Company.slug.like(f"{base_slug}%")))
+    existing_slugs = slug_result.scalars().all()
+    slug = base_slug if not existing_slugs else f"{base_slug}-{len(existing_slugs)}"
+
+    valid_types = {"boutique", "supermarket", "restaurant", "proximity", "pharmacy", "other"}
+    company_type = data.company_type if data.company_type in valid_types else "other"
+
+    company = Company(
+        name=data.company_name,
+        slug=slug,
+        type=company_type,
+        country=data.country,
+        currency=data.currency,
+        contact_email=data.contact_email or data.owner_email,
+        contact_phone=data.contact_phone or data.owner_phone,
+        is_active=True,
+    )
+    db.add(company)
+    await db.flush()
+
+    sub = Subscription(company_id=company.id, plan="starter", status="trial")
+    db.add(sub)
+
+    existing_user = await db.execute(select(User).where(User.email == data.owner_email))
+    owner = existing_user.scalar_one_or_none()
+    if not owner:
+        owner = User(
+            email=data.owner_email,
+            phone=data.owner_phone,
+            first_name=data.owner_first_name,
+            last_name=data.owner_last_name,
+            password_hash=hash_password(data.owner_password),
+            is_active=True,
+            is_verified=True,
+            email_verified=True,
+        )
+        db.add(owner)
+        await db.flush()
+
+    role = UserCompanyRole(user_id=owner.id, company_id=company.id, role="company_owner")
+    db.add(role)
+
+    log = AuditLog(
+        user_id=current_user.id,
+        action="company.created_by_admin",
+        resource_type="company",
+        resource_id=company.id,
+        new_data={"company_name": data.company_name, "owner_email": data.owner_email},
+    )
+    db.add(log)
+    await db.commit()
+
+    try:
+        from apps.notifications.service import EmailService
+        await EmailService.send_merchant_welcome(
+            email=owner.email,
+            first_name=owner.first_name,
+            company_name=company.name,
+        )
+    except Exception as exc:
+        logger.error("Merchant welcome email not sent: %s", exc)
+
+    return {
+        "company_id": str(company.id),
+        "company_name": company.name,
+        "slug": slug,
+        "owner_id": str(owner.id),
+        "owner_email": owner.email,
+        "message": f"Entreprise '{company.name}' créée avec le compte propriétaire.",
+    }
 
 
 @router.patch("/companies/{company_id}/suspend", summary="Suspendre ou réactiver une entreprise")

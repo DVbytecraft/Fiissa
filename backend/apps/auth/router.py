@@ -41,7 +41,7 @@ def _get_ip(request: Request) -> str:
     return forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
 
 
-@router.post("/register", response_model=OTPSentResponse, summary="Inscription client")
+@router.post("/register", response_model=OTPSentResponse, summary="Inscription client ou demande entreprise")
 @limiter.limit("5/minute")
 async def register_customer(
     data: CustomerRegisterRequest,
@@ -49,10 +49,37 @@ async def register_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Inscription d'un nouveau client.
-    Envoie un OTP par SMS pour vérifier le numéro.
-    Si le téléphone est déjà enregistré, renvoie un OTP.
+    Inscription client (OTP email) ou soumission d'une demande entreprise (pending → validation superadmin).
     """
+    if data.account_type == "company":
+        from sqlalchemy import select as _select
+        from apps.companies.models import CompanyRegistrationRequest
+        from core.security import hash_password as _hash
+        existing = await db.execute(
+            _select(CompanyRegistrationRequest).where(CompanyRegistrationRequest.email == str(data.email))
+        )
+        if existing.scalar_one_or_none():
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Une demande avec cet email existe déjà")
+        if not data.company_name or not data.company_type:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=422, detail="company_name et company_type sont requis")
+        req = CompanyRegistrationRequest(
+            first_name=data.first_name,
+            last_name=data.last_name,
+            email=str(data.email),
+            phone=data.phone,
+            password_hash=_hash(data.password),
+            company_name=data.company_name,
+            company_type=data.company_type,
+            status="pending",
+        )
+        db.add(req)
+        await db.commit()
+        return OTPSentResponse(
+            message="Votre demande a été soumise. Vous recevrez vos accès sous 24h.",
+            destination="pending",
+        )
     service = AuthService(db)
     return await service.register_customer(data, ip_address=_get_ip(request))
 

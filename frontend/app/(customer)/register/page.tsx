@@ -55,12 +55,17 @@ export default function RegisterPage() {
           company_type: companyType,
         }),
       }),
-    onSuccess: () => {
-      toast.success("Code de vérification envoyé par email");
-      setStep("otp");
+    onSuccess: (res: any) => {
+      if (accountType === "company" || res?.data?.destination === "pending") {
+        toast.success("Demande soumise ! L'équipe Fiissa vous contactera sous 24h.");
+        router.push("/login");
+      } else {
+        toast.success("Code de vérification envoyé par email");
+        setStep("otp");
+      }
     },
     onError: (e: any) => {
-      toast.error(e.response?.data?.message || "Erreur lors de l'inscription");
+      toast.error(e.response?.data?.detail || e.response?.data?.message || "Erreur lors de l'inscription");
     },
   });
 

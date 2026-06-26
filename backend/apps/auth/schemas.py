@@ -11,6 +11,9 @@ class CustomerRegisterRequest(BaseModel):
     password: str
     preferred_language: str = "fr"
     marketing_opt_in: bool = False
+    account_type: str = "customer"
+    company_name: Optional[str] = None
+    company_type: Optional[str] = None
 
     @field_validator("phone")
     @classmethod
