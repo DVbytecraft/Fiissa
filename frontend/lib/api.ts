@@ -146,6 +146,8 @@ export const superadminApi = {
 export const companiesApi = {
   create: (data: object) => api.post("/companies/", data),
   getById: (companyId: string) => api.get(`/companies/${companyId}`),
+  getPublicProfile: (slug: string) => api.get(`/companies/public/${slug}`),
+  updatePublicProfile: (data: object) => api.patch("/companies/me/public-profile", data),
   getMySettings: () => api.get("/companies/me/settings"),
   updateMySettings: (data: object) => api.patch("/companies/me/settings", data),
   getMyCatalog: (storeId?: string) => api.get("/companies/me/catalog", { params: { store_id: storeId } }),
@@ -212,6 +214,8 @@ export const ordersApi = {
     api.get("/orders/merchant/pending", { params: { status } }),
   updateStatus: (id: string, status: string, reason?: string) =>
     api.patch(`/orders/${id}/status`, { status, reason }),
+  setPickupMethod: (orderId: string, data: object) =>
+    api.patch(`/orders/${orderId}/pickup-method`, data),
 };
 
 export const paymentsApi = {

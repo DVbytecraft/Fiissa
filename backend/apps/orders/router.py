@@ -51,6 +51,30 @@ class PickupVerifyRequest(BaseModel):
     pickup_code: str = Field(..., min_length=4, max_length=20, description="Code de retrait ou QR scan")
 
 
+class SetPickupMethodRequest(BaseModel):
+    fulfillment_method: str = Field(
+        ...,
+        pattern="^(self_pickup|delegate|company_delivery|own_courier)$",
+        description="self_pickup | delegate | company_delivery | own_courier",
+    )
+    # Champs procuration
+    delegate_first_name: Optional[str] = Field(None, max_length=100)
+    delegate_last_name: Optional[str] = Field(None, max_length=100)
+    delegate_id_type: Optional[str] = Field(
+        None,
+        pattern="^(carte_identite|passeport|permis|photo)$",
+    )
+    delegate_id_url: Optional[str] = None
+    # Champs coursier personnel
+    courier_name: Optional[str] = None
+    courier_id_number: Optional[str] = None
+    courier_phone: Optional[str] = None
+    courier_photo_url: Optional[str] = None
+    # Champs livraison entreprise
+    delivery_address: Optional[dict] = None
+    delivery_notes: Optional[str] = None
+
+
 router = APIRouter(prefix="/orders", tags=["Commandes"])
 
 
@@ -335,6 +359,23 @@ async def verify_pickup_code(
 
     await db.commit()
 
+    pickup = order.pickup
+    fulfillment_method = pickup.fulfillment_method if pickup else "self_pickup"
+
+    delegation_info = None
+    if pickup and fulfillment_method == "delegate":
+        delegation_info = {
+            "delegate_first_name": pickup.delegate_first_name,
+            "delegate_last_name": pickup.delegate_last_name,
+            "delegate_id_type": pickup.delegate_id_type,
+            "delegate_id_url": pickup.delegate_id_url,
+            "message": pickup.delegate_message,
+        }
+
+    courier_info = None
+    if pickup and fulfillment_method == "own_courier":
+        courier_info = pickup.courier_info
+
     return {
         "success": True,
         "order_id": str(order.id),
@@ -353,7 +394,111 @@ async def verify_pickup_code(
         ],
         "pickup_code": order.pickup_code,
         "order_type": order.type,
-        "picked_up_at": order.pickup.picked_up_at.isoformat() if order.pickup and order.pickup.picked_up_at else None,
+        "fulfillment_method": fulfillment_method,
+        "delegation": delegation_info,
+        "courier": courier_info,
+        "picked_up_at": pickup.picked_up_at.isoformat() if pickup and pickup.picked_up_at else None,
+    }
+
+
+# ------------------------------------------------------------------ #
+#  MÉTHODE DE RETRAIT — PROCURATION / LIVRAISON / COURSIER             #
+# ------------------------------------------------------------------ #
+
+@router.patch("/{order_id}/pickup-method", summary="Définir la méthode de retrait Click & Collect")
+async def set_pickup_method(
+    order_id: UUID,
+    data: SetPickupMethodRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Le client définit comment sa commande sera récupérée :
+    - self_pickup    : il vient lui-même
+    - delegate       : procuration — quelqu'un d'autre vient avec une pièce d'identité
+    - company_delivery : il demande la livraison par l'enseigne
+    - own_courier    : il envoie son propre coursier (infos fournies)
+    """
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.pickup), selectinload(Order.customer))
+        .where(Order.id == order_id, Order.customer_id == current_user.id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise NotFoundError("Commande")
+    if order.type not in ("click_collect", "delivery"):
+        raise HTTPException(status_code=400, detail="Méthode de retrait applicable uniquement aux commandes Click & Collect / Livraison")
+    if order.status not in ("pending", "confirmed", "preparing"):
+        raise HTTPException(status_code=400, detail=f"Impossible de modifier une commande au statut '{order.status}'")
+
+    # Validation selon la méthode
+    if data.fulfillment_method == "delegate":
+        if not data.delegate_first_name or not data.delegate_last_name:
+            raise HTTPException(status_code=422, detail="Prénom et nom du délégué requis pour une procuration")
+        if not data.delegate_id_type:
+            raise HTTPException(status_code=422, detail="Type de pièce d'identité requis pour une procuration")
+
+    if data.fulfillment_method == "own_courier" and not data.courier_name:
+        raise HTTPException(status_code=422, detail="Le nom du coursier est requis")
+
+    if data.fulfillment_method == "company_delivery" and not data.delivery_address:
+        raise HTTPException(status_code=422, detail="L'adresse de livraison est requise")
+
+    # Créer ou récupérer le Pickup
+    if not order.pickup:
+        import secrets as _secrets
+        pickup = Pickup(
+            company_id=order.company_id,
+            order_id=order.id,
+            pickup_code=order.pickup_code or _secrets.token_hex(3).upper(),
+        )
+        db.add(pickup)
+        await db.flush()
+    else:
+        pickup = order.pickup
+
+    pickup.fulfillment_method = data.fulfillment_method
+
+    if data.fulfillment_method == "delegate":
+        pickup.delegate_first_name = data.delegate_first_name
+        pickup.delegate_last_name = data.delegate_last_name
+        pickup.delegate_id_type = data.delegate_id_type
+        pickup.delegate_id_url = data.delegate_id_url
+        pickup.delegate_message = pickup.build_delegate_message(
+            customer_full_name=current_user.full_name,
+            order_number=order.order_number,
+        )
+
+    elif data.fulfillment_method == "own_courier":
+        pickup.courier_info = {
+            "name": data.courier_name,
+            "id_number": data.courier_id_number,
+            "phone": data.courier_phone,
+            "photo_url": data.courier_photo_url,
+        }
+
+    elif data.fulfillment_method == "company_delivery":
+        pickup.delivery_address = data.delivery_address
+        pickup.delivery_notes = data.delivery_notes
+
+    log = AuditLog(
+        company_id=order.company_id,
+        user_id=current_user.id,
+        action="order.pickup_method_set",
+        resource_type="order",
+        resource_id=order.id,
+        new_data={"fulfillment_method": data.fulfillment_method},
+    )
+    db.add(log)
+    await db.commit()
+
+    return {
+        "order_id": str(order.id),
+        "order_number": order.order_number,
+        "fulfillment_method": pickup.fulfillment_method,
+        "delegate_message": pickup.delegate_message,
+        "message": "Méthode de retrait enregistrée.",
     }
 
 

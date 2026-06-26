@@ -177,6 +177,10 @@ class Delivery(Base, TimestampMixin):
     deliverer: Mapped[Optional["User"]] = relationship(foreign_keys=[deliverer_id])
 
 
+PICKUP_FULFILLMENT_VALUES = ("self_pickup", "delegate", "company_delivery", "own_courier")
+DELEGATE_ID_TYPE_VALUES = ("carte_identite", "passeport", "permis", "photo")
+
+
 class Pickup(Base, TimestampMixin):
     __tablename__ = "pickups"
 
@@ -188,9 +192,28 @@ class Pickup(Base, TimestampMixin):
     )
     pickup_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     status: Mapped[str] = mapped_column(
-        SAEnum("pending", "ready", "completed", "expired", name="pickup_status_enum"),
+        SAEnum("pending", "ready", "completed", "expired", "cancelled", name="pickup_status_enum"),
         default="pending",
     )
+    # ── Méthode de récupération ──────────────────────────────────────────────
+    fulfillment_method: Mapped[str] = mapped_column(
+        SAEnum(*PICKUP_FULFILLMENT_VALUES, name="pickup_fulfillment_enum"),
+        nullable=False, default="self_pickup",
+    )
+    # ── Procuration (delegate) ───────────────────────────────────────────────
+    delegate_first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    delegate_last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    delegate_id_type: Mapped[Optional[str]] = mapped_column(
+        SAEnum(*DELEGATE_ID_TYPE_VALUES, name="delegate_id_type_enum"), nullable=True
+    )
+    delegate_id_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delegate_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # ── Coursier personnel (own_courier) ─────────────────────────────────────
+    courier_info: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    # ── Livraison entreprise (company_delivery) ───────────────────────────────
+    delivery_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    delivery_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # ── Timestamps ───────────────────────────────────────────────────────────
     ready_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     picked_up_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -199,6 +222,16 @@ class Pickup(Base, TimestampMixin):
 
     order: Mapped["Order"] = relationship(back_populates="pickup")
     verified_by: Mapped[Optional["User"]] = relationship(foreign_keys=[verified_by_id])
+
+    def build_delegate_message(self, customer_full_name: str, order_number: str) -> str:
+        """Génère le message pré-rédigé pour le personnel de l'enseigne."""
+        return (
+            f"Bonjour, je suis {self.delegate_first_name} {self.delegate_last_name} "
+            f"et je viens récupérer la commande #{order_number} pour le compte de "
+            f"{customer_full_name}. Je peux vous présenter ma pièce d'identité "
+            f"({'carte d\'identité' if self.delegate_id_type == 'carte_identite' else self.delegate_id_type or 'document'}) "
+            f"pour vérification."
+        )
 
 
 class OrderQRCode(Base):

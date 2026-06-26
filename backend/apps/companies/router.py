@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.catalog.service import CatalogResolutionService
 from apps.companies.models import Company, CompanyRegistrationRequest, CompanySetting, FeatureFlag, Plan, Subscription, SubscriptionInvoice, SubscriptionRenewal
+from apps.notifications.models import AuditLog
 from apps.companies.service import SubscriptionService
 from core.database import get_db
 from core.dependencies import (
@@ -53,6 +54,9 @@ class CompanyUpdate(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     address: Optional[dict] = None
+    description: Optional[str] = None
+    website_url: Optional[str] = None
+    opening_hours: Optional[dict] = None
 
 
 class CompanySettingsUpdate(BaseModel):
@@ -651,6 +655,99 @@ async def reject_registration_request(
     await db.commit()
 
     return {"success": True, "message": "Demande rejetée."}
+
+
+# ------------------------------------------------------------------ #
+#  PROFIL PUBLIC ENTREPRISE (par slug — pas d'auth requise)           #
+# ------------------------------------------------------------------ #
+
+@router.get("/public/{slug}", summary="Profil public d'une enseigne")
+async def get_company_public_profile(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Route publique : retourne les informations visibles par les clients
+    (logo, horaires, description, téléphone).
+    Accessible sans authentification.
+    """
+    result = await db.execute(
+        select(Company).where(Company.slug == slug, Company.is_active == True)
+    )
+    company = result.scalar_one_or_none()
+    if not company:
+        raise NotFoundError("Enseigne introuvable")
+
+    from apps.loyalty.models import LoyaltyProgram
+    loyalty_result = await db.execute(
+        select(LoyaltyProgram).where(
+            LoyaltyProgram.company_id == company.id,
+            LoyaltyProgram.is_active == True,
+            LoyaltyProgram.loyalty_enabled == True,
+        )
+    )
+    loyalty = loyalty_result.scalar_one_or_none()
+
+    return {
+        "id": str(company.id),
+        "slug": company.slug,
+        "name": company.name,
+        "type": company.type,
+        "logo_url": company.logo_url,
+        "description": company.description,
+        "website_url": company.website_url,
+        "contact_phone": company.contact_phone,
+        "contact_email": company.contact_email,
+        "address": company.address,
+        "opening_hours": company.opening_hours,
+        "country": company.country,
+        "currency": company.currency,
+        "loyalty": {
+            "enabled": bool(loyalty),
+            "program_name": loyalty.name if loyalty else None,
+            "points_per_xof": float(loyalty.points_per_xof) if loyalty else None,
+            "description": loyalty.description if loyalty else None,
+        } if loyalty else {"enabled": False},
+    }
+
+
+@router.patch("/me/public-profile", summary="Mettre à jour le profil public de l'entreprise")
+async def update_company_public_profile(
+    data: CompanyUpdate,
+    ctx: TenantContext = Depends(get_tenant_context),
+    current_user=Depends(require_permission("company.update")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Met à jour les informations visibles par les clients : logo, horaires, description, téléphone."""
+    result = await db.execute(select(Company).where(Company.id == ctx.company_id))
+    company = result.scalar_one_or_none()
+    if not company:
+        raise NotFoundError("Entreprise")
+
+    updates = data.model_dump(exclude_none=True)
+    for key, value in updates.items():
+        setattr(company, key, value)
+
+    log = AuditLog(
+        company_id=ctx.company_id,
+        user_id=current_user.id,
+        action="company.profile_updated",
+        resource_type="company",
+        resource_id=company.id,
+        new_data=updates,
+    )
+    db.add(log)
+
+    return {
+        "slug": company.slug,
+        "name": company.name,
+        "logo_url": company.logo_url,
+        "description": company.description,
+        "website_url": company.website_url,
+        "opening_hours": company.opening_hours,
+        "contact_phone": company.contact_phone,
+        "message": "Profil public mis à jour",
+    }
 
 
 # ------------------------------------------------------------------ #

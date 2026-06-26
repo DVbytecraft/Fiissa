@@ -44,6 +44,10 @@ class Company(Base, TimestampMixin):
     # Contact principal
     contact_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     contact_phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    # Profil public
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    website_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    opening_hours: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     # Paramètres globaux
     settings: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
 
