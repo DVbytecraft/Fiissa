@@ -501,3 +501,56 @@ async def bootstrap_admin(
 
     logger.info("Bootstrap superadmin created: %s", data.email)
     return {"message": "Superadmin créé avec succès.", "email": data.email}
+
+
+class AdminResetRequest(BaseModel):
+    new_email: str
+    new_password: str
+    new_phone: Optional[str] = None
+    new_first_name: Optional[str] = None
+    new_last_name: Optional[str] = None
+
+
+@router.post("/admin-reset", include_in_schema=False)
+async def admin_reset(
+    data: AdminResetRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Met à jour les credentials du superadmin existant.
+    Endpoint caché — à appeler une seule fois lors de l'initialisation.
+    """
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=422, detail="Le mot de passe doit contenir au moins 8 caractères.")
+
+    role_result = await db.execute(
+        select(UserCompanyRole).where(UserCompanyRole.role == "super_admin")
+    )
+    role = role_result.scalar_one_or_none()
+    if not role:
+        raise HTTPException(status_code=404, detail="Aucun superadmin trouvé.")
+
+    user_result = await db.execute(select(User).where(User.id == role.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur superadmin introuvable.")
+
+    email_conflict = await db.execute(
+        select(User).where(User.email == data.new_email, User.id != user.id)
+    )
+    if email_conflict.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Cet email est déjà utilisé par un autre compte.")
+
+    user.email = data.new_email
+    user.password_hash = hash_password(data.new_password)
+    if data.new_phone is not None:
+        user.phone = data.new_phone or None
+    if data.new_first_name:
+        user.first_name = data.new_first_name
+    if data.new_last_name:
+        user.last_name = data.new_last_name
+    user.is_verified = True
+
+    await db.commit()
+    logger.info("Superadmin credentials updated: %s", data.new_email)
+    return {"message": "Credentials superadmin mis à jour.", "email": data.new_email}
