@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowLeft, Package, Receipt, MapPin, QrCode, Clock, CheckCircle, Truck } from "lucide-react";
+import { ArrowLeft, Package, Receipt, MapPin, QrCode, Clock, CheckCircle, Truck, UserCheck, Home, User } from "lucide-react";
 import { ordersApi } from "@/lib/api";
+import { toast } from "sonner";
 
 const STATUS_STEPS = [
   { key: "confirmed",  label: "Confirmée" },
@@ -80,11 +82,54 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const orderId = params.orderId as string;
 
+  const queryClient = useQueryClient();
+
   const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => ordersApi.getOne(orderId).then((r) => r.data),
     refetchInterval: 30000,
   });
+
+  const [pickupEditing, setPickupEditing] = useState(false);
+  const [pickupMode, setPickupMode] = useState("");
+  const [delegateFirstName, setDelegateFirstName] = useState("");
+  const [delegateLastName, setDelegateLastName] = useState("");
+  const [delegateIdType, setDelegateIdType] = useState("carte_identite");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+
+  const setPickupMutation = useMutation({
+    mutationFn: (payload: object) => ordersApi.setPickupMethod(orderId, payload),
+    onSuccess: () => {
+      toast.success("Mode de retrait enregistré");
+      setPickupEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+    },
+    onError: (e: any) => toast.error(e.response?.data?.detail || "Erreur lors de l'enregistrement"),
+  });
+
+  function submitPickup() {
+    if (!pickupMode) return;
+    if (pickupMode === "delegate") {
+      if (!delegateFirstName.trim() || !delegateLastName.trim()) {
+        toast.error("Prénom et nom du mandataire requis");
+        return;
+      }
+    }
+    if (pickupMode === "company_delivery" && !deliveryAddress.trim()) {
+      toast.error("Adresse de livraison requise");
+      return;
+    }
+    const payload: any = { fulfillment_method: pickupMode };
+    if (pickupMode === "delegate") {
+      payload.delegate_first_name = delegateFirstName.trim();
+      payload.delegate_last_name = delegateLastName.trim();
+      payload.delegate_id_type = delegateIdType;
+    }
+    if (pickupMode === "company_delivery") {
+      payload.delivery_address = { address: deliveryAddress.trim() };
+    }
+    setPickupMutation.mutate(payload);
+  }
 
   if (isLoading) {
     return (
@@ -148,6 +193,114 @@ export default function OrderDetailPage() {
             <p className="text-white/80 text-sm font-semibold">Votre commande est prête !</p>
             <p className="text-white font-black text-4xl mt-2 tracking-widest font-mono">{order.pickup_code}</p>
             <p className="text-white/70 text-xs mt-2">Présentez ce code en caisse</p>
+          </div>
+        )}
+
+        {/* ── Procuration / Mode de retrait (click_collect & scan_go) ── */}
+        {["click_collect", "scan_go"].includes(order.type) &&
+         ["confirmed", "preparing", "ready"].includes(order.status) && (
+          <div className="rounded-2xl overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--bg-app)" }}>
+              <p className="font-bold text-sm" style={{ color: "var(--tx-head)" }}>Mode de retrait</p>
+              {order.fulfillment_method && !pickupEditing && (
+                <button onClick={() => { setPickupMode(order.fulfillment_method); setPickupEditing(true); }}
+                  className="text-xs font-semibold" style={{ color: "var(--p-500)" }}>Modifier</button>
+              )}
+            </div>
+
+            {/* Affichage du mode déjà choisi */}
+            {order.fulfillment_method && !pickupEditing && (
+              <div className="px-4 py-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(34,87,255,0.08)" }}>
+                  {order.fulfillment_method === "delegate"       && <UserCheck size={16} style={{ color: "var(--p-500)" }} />}
+                  {order.fulfillment_method === "company_delivery" && <Home size={16} style={{ color: "var(--p-500)" }} />}
+                  {order.fulfillment_method === "self_pickup"    && <User size={16} style={{ color: "var(--p-500)" }} />}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm" style={{ color: "var(--tx-head)" }}>
+                    {order.fulfillment_method === "self_pickup"     && "Je viens moi-même"}
+                    {order.fulfillment_method === "delegate"        && `Procuration — ${order.delegate_first_name ?? ""} ${order.delegate_last_name ?? ""}`.trim()}
+                    {order.fulfillment_method === "company_delivery" && "Livraison à domicile demandée"}
+                  </p>
+                  {order.delegate_message && (
+                    <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>{order.delegate_message}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Formulaire choix / édition */}
+            {(!order.fulfillment_method || pickupEditing) && (
+              <div className="px-4 py-4 space-y-3">
+                {/* Options */}
+                {[
+                  { value: "self_pickup",      icon: <User size={16} />,      label: "Je viens moi-même",         desc: "Je récupère la commande en personne" },
+                  { value: "delegate",         icon: <UserCheck size={16} />, label: "J'envoie quelqu'un",         desc: "Procuration — je désigne un mandataire" },
+                  { value: "company_delivery", icon: <Home size={16} />,      label: "Je veux être livré",         desc: "L'enseigne livre à mon adresse" },
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => setPickupMode(opt.value)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
+                    style={{
+                      background: pickupMode === opt.value ? "rgba(34,87,255,0.08)" : "var(--bg-app)",
+                      border: `1.5px solid ${pickupMode === opt.value ? "var(--p-500)" : "var(--bd)"}`,
+                    }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: pickupMode === opt.value ? "var(--p-500)" : "var(--bd)", color: "#fff" }}>
+                      {opt.icon}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: "var(--tx-head)" }}>{opt.label}</p>
+                      <p className="text-xs" style={{ color: "var(--tx-muted)" }}>{opt.desc}</p>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Champs procuration */}
+                {pickupMode === "delegate" && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="Prénom *" value={delegateFirstName}
+                        onChange={(e) => setDelegateFirstName(e.target.value)}
+                        className="input-mobile flex-1" />
+                      <input type="text" placeholder="Nom *" value={delegateLastName}
+                        onChange={(e) => setDelegateLastName(e.target.value)}
+                        className="input-mobile flex-1" />
+                    </div>
+                    <select value={delegateIdType} onChange={(e) => setDelegateIdType(e.target.value)}
+                      className="input-mobile w-full">
+                      <option value="carte_identite">Carte d'identité</option>
+                      <option value="passeport">Passeport</option>
+                      <option value="permis">Permis de conduire</option>
+                      <option value="photo">Photo</option>
+                    </select>
+                    <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
+                      Le mandataire devra présenter sa pièce d'identité en magasin.
+                    </p>
+                  </div>
+                )}
+
+                {/* Champ adresse livraison */}
+                {pickupMode === "company_delivery" && (
+                  <input type="text" placeholder="Adresse de livraison *" value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="input-mobile w-full" />
+                )}
+
+                {/* Boutons */}
+                <div className="flex gap-2 pt-1">
+                  {pickupEditing && (
+                    <button onClick={() => setPickupEditing(false)}
+                      className="btn-secondary flex-1">Annuler</button>
+                  )}
+                  <button onClick={submitPickup}
+                    disabled={!pickupMode || setPickupMutation.isPending}
+                    className="btn-primary flex-1">
+                    {setPickupMutation.isPending ? "Enregistrement…" : "Confirmer"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

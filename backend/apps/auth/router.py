@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -445,3 +445,59 @@ async def remove_staff(
     )
     db.add(log)
     return {"message": "Accès révoqué"}
+
+
+# ── Bootstrap premier superadmin ──────────────────────────────────────────────
+
+class BootstrapAdminRequest(BaseModel):
+    email: str
+    password: str
+    phone: Optional[str] = None
+    first_name: str = "Super"
+    last_name: str = "Admin"
+
+
+@router.post("/bootstrap-admin", include_in_schema=False)
+async def bootstrap_admin(
+    data: BootstrapAdminRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Crée le premier superadmin.
+    Automatiquement désactivé dès qu'un super_admin existe en base.
+    """
+    existing_role = await db.execute(
+        select(UserCompanyRole).where(UserCompanyRole.role == "super_admin")
+    )
+    if existing_role.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Un superadmin existe déjà. Endpoint désactivé.")
+
+    existing_user = await db.execute(select(User).where(User.email == data.email))
+    if existing_user.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Cet email est déjà utilisé.")
+
+    if len(data.password) < 8:
+        raise HTTPException(status_code=422, detail="Le mot de passe doit contenir au moins 8 caractères.")
+
+    user = User(
+        email=data.email,
+        phone=data.phone or None,
+        password_hash=hash_password(data.password),
+        first_name=data.first_name,
+        last_name=data.last_name,
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(user)
+    await db.flush()
+
+    role = UserCompanyRole(
+        user_id=user.id,
+        company_id=None,
+        role="super_admin",
+    )
+    db.add(role)
+    await db.commit()
+
+    logger.info("Bootstrap superadmin created: %s", data.email)
+    return {"message": "Superadmin créé avec succès.", "email": data.email}
