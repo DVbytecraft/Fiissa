@@ -38,13 +38,16 @@ export default function PaymentPage() {
   const router      = useRouter();
   const { copy, copied } = useCopy();
 
-  type Step = "select" | "instructions" | "submit" | "waiting" | "manual";
+  type Step = "select" | "instructions" | "submit" | "waiting" | "manual" | "gateway";
   const [step, setStep]             = useState<Step>("select");
   const [operator, setOperator]     = useState<string | null>(null);
   const [paymentId, setPaymentId]   = useState<string | null>(null);
   const [instructions, setInstructions] = useState<any>(null);
   const [txRef, setTxRef]           = useState("");
   const [senderPhone, setSenderPhone] = useState("");
+  const [gatewayPhone, setGatewayPhone] = useState("");
+  const [gatewayMsg, setGatewayMsg] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<"paygate" | "fedapay" | null>(null);
 
   /* Chargement commande */
   const { data: order, isLoading } = useQuery({
@@ -53,11 +56,63 @@ export default function PaymentPage() {
     enabled: !!orderId,
   });
 
+  /* Chargement options paiement du magasin */
+  const { data: paymentOptions } = useQuery({
+    queryKey: ["payment-options", order?.store?.id],
+    queryFn: () => paymentsApi.getStoreOptions(order!.store!.id).then((r) => r.data),
+    enabled: !!order?.store?.id,
+  });
+
   /* Détection mode paiement manuel du magasin */
   const isManualMode = (() => {
     const mode = order?.store?.payment_mode ?? order?.payment_mode ?? "";
     return mode === "manual" || mode === "GRATUIT_MANUEL" || mode === "free_manual";
   })();
+
+  /* Initier paiement via PayGate */
+  const initiateGatewayMutation = useMutation({
+    mutationFn: async () => {
+      // 1. Créer le paiement d'abord
+      const payRes = await paymentsApi.create({
+        order_id: orderId,
+        company_id: order?.company_id,
+        method: "gateway",
+        operator: "paygate",
+      });
+      const pid = payRes.data.payment_id ?? payRes.data.id;
+      // 2. Initier via PayGate
+      return paymentsApi.initiateGateway(pid, gatewayPhone.trim(), "paygate");
+    },
+    onSuccess: (res) => {
+      setPaymentId(res.data?.tx_reference);
+      setGatewayMsg(res.data?.message || "Demande envoyée. Validez sur votre téléphone.");
+      setStep("waiting");
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur PayGate"),
+  });
+
+  /* Initier paiement via FedaPay — crée le paiement puis redirige vers la page hosted FedaPay */
+  const initiateFedaPayMutation = useMutation({
+    mutationFn: async () => {
+      const payRes = await paymentsApi.create({
+        order_id: orderId,
+        company_id: order?.company_id,
+        method: "gateway",
+        operator: "fedapay",
+      });
+      const pid = payRes.data.payment_id ?? payRes.data.id;
+      return paymentsApi.initiateGateway(pid, "", "fedapay");
+    },
+    onSuccess: (res) => {
+      const paymentUrl = res.data?.payment_url;
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+      } else {
+        toast.error("FedaPay n'a pas retourné d'URL de paiement.");
+      }
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur FedaPay"),
+  });
 
   /* Mutation dédiée au mode manuel (create + submit en une seule passe) */
   const manualSubmitMutation = useMutation({
@@ -291,41 +346,149 @@ export default function PaymentPage() {
       {/* ══════════ ÉTAPE 1 — Choisir l'opérateur ══════════ */}
       {step === "select" && (
         <div className="px-5 pt-5 pb-8">
-          <p className="section-label mb-3">Choisir votre opérateur</p>
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
-          >
-            {OPERATORS.map((op, i) => {
-              const isSelected = operator === op.id;
-              const isPending  = createMutation.isPending && isSelected;
-              return (
+          {(paymentOptions?.paygate || paymentOptions?.fedapay) && (
+            <>
+              <p className="section-label mb-3">Paiement instantané</p>
+              
+              {/* Bouton PayGate USSD */}
+              {paymentOptions?.paygate && (
                 <button
-                  key={op.id}
-                  onClick={() => { setOperator(op.id); createMutation.mutate(op.id); }}
-                  disabled={createMutation.isPending}
-                  className="w-full flex items-center gap-4 px-5 py-4 text-left active:bg-gray-50 transition-colors disabled:opacity-60"
-                  style={{ borderBottom: i < OPERATORS.length - 1 ? "1px solid var(--bg-layout)" : "none" }}
+                  onClick={() => { setSelectedProvider("paygate"); setStep("gateway"); }}
+                  className="w-full rounded-2xl p-4 mb-3 flex items-center gap-4 text-left transition-all active:scale-98"
+                  style={{ background: "#111111", border: "2px solid #111111" }}
                 >
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
-                    style={{ background: op.bg }}
-                  >
-                    {op.abbr}
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
+                    style={{ background: "#10B981" }}>
+                    ⚡
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm" style={{ color: "#111111" }}>{op.label}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>{op.desc}</p>
+                    <p className="font-bold text-sm text-white">PayGate (USSD Auto)</p>
+                    <p className="text-xs mt-0.5 text-gray-400">T-Money · Flooz · Validation automatique</p>
                   </div>
-                  {isPending
-                    ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
-                        style={{ borderColor: `${op.bg} transparent transparent transparent` }} />
-                    : <ChevronRight size={16} style={{ color: "var(--n-300)" }} />
-                  }
+                  <ChevronRight size={16} className="text-gray-400" />
                 </button>
-              );
-            })}
+              )}
+
+              {/* Bouton FedaPay */}
+              {paymentOptions?.fedapay && (
+                <button
+                  onClick={() => { setSelectedProvider("fedapay"); initiateFedaPayMutation.mutate(); }}
+                  disabled={initiateFedaPayMutation.isPending}
+                  className="w-full rounded-2xl p-4 mb-3 flex items-center gap-4 text-left transition-all active:scale-98 disabled:opacity-60"
+                  style={{ background: "#FEDAD0", border: "2px solid #FF6B5C" }}
+                >
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
+                    style={{ background: "#FF6B5C" }}>
+                    {initiateFedaPayMutation.isPending ? (
+                      <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    ) : "F"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm" style={{ color: "#662D2D" }}>FedaPay</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#993E33" }}>
+                      {initiateFedaPayMutation.isPending ? "Redirection en cours…" : "Mobile Money · Carte bancaire · International"}
+                    </p>
+                  </div>
+                  {!initiateFedaPayMutation.isPending && <ChevronRight size={16} style={{ color: "#993E33" }} />}
+                </button>
+              )}
+            </>
+          )}
+
+          {paymentOptions?.manual && (
+            <>
+              <p className="section-label mb-3 mt-6">Paiement manuel</p>
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+              >
+                {OPERATORS.map((op, i) => {
+                  const isSelected = operator === op.id;
+                  const isPending  = createMutation.isPending && isSelected;
+                  return (
+                    <button
+                      key={op.id}
+                      onClick={() => { setOperator(op.id); createMutation.mutate(op.id); }}
+                      disabled={createMutation.isPending}
+                      className="w-full flex items-center gap-4 px-5 py-4 text-left active:bg-gray-50 transition-colors disabled:opacity-60"
+                      style={{ borderBottom: i < OPERATORS.length - 1 ? "1px solid var(--bg-layout)" : "none" }}
+                    >
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm"
+                        style={{ background: op.bg }}
+                      >
+                        {op.abbr}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm" style={{ color: "#111111" }}>{op.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>{op.desc}</p>
+                      </div>
+                      {isPending
+                        ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                            style={{ borderColor: `${op.bg} transparent transparent transparent` }} />
+                        : <ChevronRight size={16} style={{ color: "var(--n-300)" }} />
+                      }
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {!paymentOptions && (
+             <div className="px-5 py-10 flex flex-col items-center gap-4">
+                <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: "var(--color-action) transparent transparent transparent" }} />
+                <p style={{ color: "var(--tx-muted)" }}>Chargement des options de paiement…</p>
+             </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════════ ÉTAPE GATEWAY — PayGate USSD ══════════ */}
+      {step === "gateway" && (
+        <div className="px-5 pt-5 space-y-4 pb-8">
+          <button onClick={() => setStep("select")} className="text-sm font-semibold flex items-center gap-1" style={{ color: "var(--tx-muted)" }}>
+            <ArrowLeft size={14} /> Changer de méthode
+          </button>
+
+          <div className="rounded-3xl p-6 text-center" style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}>
+            <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl mb-3" style={{ background: "#10B981" }}>⚡</div>
+            <p className="font-bold text-base" style={{ color: "#111111" }}>Paiement PayGate</p>
+            <p className="text-xs mt-1" style={{ color: "var(--tx-muted)" }}>Validez directement sur votre téléphone sans quitter l'app</p>
           </div>
+
+          <div className="rounded-2xl p-5 space-y-3" style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}>
+            <div>
+              <label className="field-label mb-2">Numéro de téléphone Mobile Money</label>
+              <input
+                type="tel"
+                placeholder="Ex : 90 XX XX XX"
+                value={gatewayPhone}
+                onChange={(e) => setGatewayPhone(e.target.value)}
+                className="input-mobile"
+                autoComplete="off"
+              />
+              <p className="text-xs mt-1.5" style={{ color: "var(--tx-muted)" }}>Le numéro qui recevra la demande de validation USSD</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (!gatewayPhone.trim()) {
+                toast.error("Entrez votre numéro de téléphone");
+                return;
+              }
+              initiateGatewayMutation.mutate();
+            }}
+            disabled={!gatewayPhone.trim() || initiateGatewayMutation.isPending}
+            className="btn-primary"
+          >
+            {initiateGatewayMutation.isPending ? (
+              <span className="flex items-center gap-2"><div className="spinner border-white border-t-transparent" />Envoi demande…</span>
+            ) : (
+              <>⚡ Payer {order.total_xof?.toLocaleString("fr-FR")} FCFA</>
+            )}
+          </button>
         </div>
       )}
 
