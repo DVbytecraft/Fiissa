@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.companies.models import Company, Subscription
+from apps.companies.models import Company
 from apps.users.models import User
 from apps.orders.models import Order
 from apps.notifications.models import AuditLog
@@ -16,11 +16,11 @@ class SuperAdminService:
     async def get_platform_stats(self) -> dict:
         total_companies = await self.db.scalar(select(func.count(Company.id))) or 0
         active_companies = await self.db.scalar(
-            select(func.count(Company.id)).where(Company.is_active == True)
+            select(func.count(Company.id)).where(Company.is_active)
         ) or 0
         total_users = await self.db.scalar(select(func.count(User.id))) or 0
 
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timezone
         month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         orders_month = await self.db.scalar(
             select(func.count(Order.id)).where(Order.created_at >= month_start)

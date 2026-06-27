@@ -60,3 +60,6 @@ class WalletPaymentMethod(Base, TimestampMixin):
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
 
     customer: Mapped["User"] = relationship(foreign_keys=[customer_id])
+
+
+from apps.users.models import User  # noqa: E402

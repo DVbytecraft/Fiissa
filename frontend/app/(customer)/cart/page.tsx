@@ -1,11 +1,12 @@
 ﻿"use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Minus, Plus, Store, Trash2, Truck } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { ArrowLeft, Gift, MapPin, Minus, Plus, Store, Tag, Trash2, Truck, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCartStore, useAuthStore } from "@/lib/store";
-import { ordersApi } from "@/lib/api";
+import { loyaltyApi, ordersApi } from "@/lib/api";
 import { toast } from "sonner";
 
 type DeliveryType = "click_collect" | "delivery";
@@ -18,6 +19,15 @@ export default function CartPage() {
   const [step, setStep]                     = useState<"cart" | "delivery">("cart");
   const [deliveryType, setDeliveryType]     = useState<DeliveryType>("click_collect");
   const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "", landmark: "" });
+  const [couponCode, setCouponCode]         = useState("");
+
+  const { data: loyaltyCard } = useQuery({
+    queryKey: ["card-for-company", companyId],
+    queryFn: () =>
+      loyaltyApi.getCardForCompany(companyId!).then((r) => r.data),
+    enabled: Boolean(isAuthenticated && companyId),
+    retry: false,
+  });
 
   const createOrderMutation = useMutation({
     mutationFn: () =>
@@ -26,6 +36,7 @@ export default function CartPage() {
         company_id: companyId,
         order_type: deliveryType,
         delivery_address: deliveryType === "delivery" ? deliveryAddress : undefined,
+        coupon_code: couponCode.trim() || undefined,
       }),
     onSuccess: (res) => {
       clearCart();
@@ -117,7 +128,7 @@ export default function CartPage() {
             >
               {/* Miniature */}
               {item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                <Image src={item.imageUrl} alt={item.name} width={64} height={64} unoptimized className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
               ) : (
                 <div
                   className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
@@ -173,6 +184,60 @@ export default function CartPage() {
             </div>
           ))}
 
+          {/* Carte fidélité détectée */}
+          {loyaltyCard && loyaltyCard.points_balance > 0 && (
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+              style={{ background: "rgba(34,87,255,0.06)", border: "1px solid rgba(34,87,255,0.18)" }}
+            >
+              <Gift size={18} style={{ color: "var(--p-500)", flexShrink: 0 }} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: "var(--tx-head)" }}>
+                  {loyaltyCard.points_balance.toLocaleString("fr-FR")} pts disponibles
+                </p>
+                {loyaltyCard.tier_name && (
+                  <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>
+                    Niveau {loyaltyCard.tier_name}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Coupon de réduction */}
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Tag size={14} style={{ color: "var(--tx-muted)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--tx-muted)" }}>
+                Code promo
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="MONCODE"
+                className="input-mobile flex-1 font-mono text-sm"
+              />
+              {couponCode && (
+                <button
+                  onClick={() => setCouponCode("")}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "var(--n-100)", color: "var(--tx-muted)" }}
+                  aria-label="Effacer le code"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <p className="text-xs mt-1.5" style={{ color: "var(--tx-muted)" }}>
+              Le coupon sera appliqué à la confirmation
+            </p>
+          </div>
+
           {/* Récapitulatif */}
           <div
             className="rounded-2xl p-4 mt-2"
@@ -182,6 +247,12 @@ export default function CartPage() {
               <span>Sous-total</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
+            {couponCode.trim() && (
+              <div className="flex justify-between text-sm mb-2" style={{ color: "var(--p-500)" }}>
+                <span className="font-semibold">Coupon · {couponCode.trim()}</span>
+                <span>appliqué à la commande</span>
+              </div>
+            )}
             <div
               className="flex justify-between font-semibold text-sm pt-2"
               style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}
@@ -302,9 +373,20 @@ export default function CartPage() {
 
           {/* Récapitulatif total */}
           <div
-            className="rounded-2xl p-4"
+            className="rounded-2xl p-4 space-y-2"
             style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
           >
+            {couponCode.trim() && (
+              <div className="flex items-center gap-2">
+                <Tag size={14} style={{ color: "var(--p-500)" }} />
+                <span className="text-sm font-semibold flex-1" style={{ color: "var(--p-500)" }}>
+                  Coupon · {couponCode.trim()}
+                </span>
+                <button onClick={() => setCouponCode("")} style={{ color: "var(--tx-muted)" }} aria-label="Retirer le coupon">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-sm" style={{ color: "var(--tx-head)" }}>
               <span>Total à payer</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>

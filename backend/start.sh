@@ -3,7 +3,9 @@
 # Uvicorn must stay up so Render's health check keeps passing.
 
 echo "[start.sh] Starting Uvicorn..."
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 &
+# WEB_CONCURRENCY: 1 sur plan free (512 MB), 3-4 sur plan standard (2 GB)
+WORKERS=${WEB_CONCURRENCY:-1}
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers "$WORKERS" &
 UVICORN_PID=$!
 echo "[start.sh] Uvicorn PID=$UVICORN_PID"
 

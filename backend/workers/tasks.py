@@ -50,7 +50,10 @@ def generate_receipt_pdf(self, payment_id: str):
                 raise e
 
     try:
-        return run_async(_run())
+        result = run_async(_run())
+        # Une fois le reçu généré, on déclenche la notification au client
+        notify_customer_payment_confirmed.delay(payment_id)
+        return result
     except Exception as exc:
         raise self.retry(exc=exc, countdown=30)
 
@@ -77,7 +80,7 @@ def notify_merchant_payment_received(payment_id: str):
                 select(UserCompanyRole).where(
                     UserCompanyRole.company_id == payment.company_id,
                     UserCompanyRole.role.in_(["company_owner", "store_manager"]),
-                    UserCompanyRole.is_active == True,
+                    UserCompanyRole.is_active,
                 )
             )
             roles = result.scalars().all()
@@ -224,6 +227,7 @@ def cancel_expired_orders():
 
         from core.database import AsyncSessionLocal
         from apps.orders.models import Order
+        from apps.orders.service import OrderService
         from apps.notifications.models import AuditLog
 
         async with AsyncSessionLocal() as db:
@@ -235,8 +239,12 @@ def cancel_expired_orders():
                 )
             )
             orders = result.scalars().all()
+            order_service = OrderService(db)
 
             for order in orders:
+                # Libérer le stock avant d'annuler
+                await order_service._release_stock_for_order(order, order.company_id)
+                
                 order.status = "cancelled"
                 order.cancelled_at = now
                 order.cancelled_reason = "Delai de paiement depasse"
@@ -271,8 +279,8 @@ def send_stock_alerts():
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(Product).where(
-                    Product.track_stock == True,
-                    Product.is_deleted == False,
+                    Product.track_stock,
+                    Product.is_deleted.is_(False),
                     Product.stock_quantity <= Product.stock_alert_qty,
                 )
             )
@@ -283,7 +291,7 @@ def send_stock_alerts():
                     select(UserCompanyRole).where(
                         UserCompanyRole.company_id == product.company_id,
                         UserCompanyRole.role.in_(["company_owner", "store_manager"]),
-                        UserCompanyRole.is_active == True,
+                        UserCompanyRole.is_active,
                     )
                 )
                 roles = result.scalars().all()
@@ -369,7 +377,7 @@ def generate_monthly_reports():
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                select(Company).where(Company.is_active == True, Company.is_suspended == False)
+                select(Company).where(Company.is_active, Company.is_suspended.is_(False))
             )
             companies = result.scalars().all()
             for company in companies:
@@ -396,7 +404,7 @@ def compute_customer_scores():
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                select(Company).where(Company.is_active == True, Company.is_suspended == False)
+                select(Company).where(Company.is_active, Company.is_suspended.is_(False))
             )
             companies = result.scalars().all()
             service = CustomerIntelligenceService(db)

@@ -66,7 +66,9 @@ class LoyaltyProgram(Base, TimestampMixin):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     loyalty_enabled: Mapped[bool] = mapped_column(
@@ -74,7 +76,7 @@ class LoyaltyProgram(Base, TimestampMixin):
     )
     points_per_xof: Mapped[float] = mapped_column(
         Numeric(10, 4), nullable=False, default=0.01,
-        comment="Points gagnés par XOF dépensé. Ex: 0.01 = 1 point pour 100 XOF."
+        comment="Points gagné par XOF dépensé. Ex: 0.01 = 1 point pour 100 XOF."
     )
     min_spend_xof: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     expiry_months: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -100,7 +102,9 @@ class LoyaltyTier(Base, TimestampMixin):
     program_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("loyalty_programs.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(60), nullable=False)
     min_points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     multiplier: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=1.0)
@@ -118,7 +122,9 @@ class CardTemplate(Base, TimestampMixin):
     __tablename__ = "card_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     tier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("loyalty_tiers.id", ondelete="SET NULL"), nullable=True
     )
@@ -150,7 +156,9 @@ class LoyaltyCard(Base, TimestampMixin):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     customer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -181,6 +189,8 @@ class LoyaltyCard(Base, TimestampMixin):
     program: Mapped[Optional["LoyaltyProgram"]] = relationship(back_populates="cards")
     customer: Mapped["User"] = relationship(foreign_keys=[customer_id])
     transactions: Mapped[list["LoyaltyTransaction"]] = relationship(back_populates="card")
+    card_template: Mapped[Optional["CardTemplate"]] = relationship(foreign_keys=[card_template_id])
+    company: Mapped["Company"] = relationship()
 
 
 # ── loyalty_transactions ───────────────────────────────────────────────────────
@@ -312,3 +322,7 @@ class CustomerScore(Base, TimestampMixin):
     )
 
     customer: Mapped["User"] = relationship(foreign_keys=[customer_id])
+
+
+from apps.users.models import User  # noqa: E402
+from apps.companies.models import Company  # noqa: E402

@@ -20,7 +20,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.conftest import staff_headers, auth_headers
+from tests.conftest import staff_headers
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

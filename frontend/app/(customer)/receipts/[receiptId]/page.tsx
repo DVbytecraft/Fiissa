@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle, ChevronLeft, Download, QrCode, Share2, Sparkles } from "lucide-react";
@@ -167,7 +168,7 @@ export default function ReceiptDetailPage() {
             </div>
             <div className="inline-block rounded-2xl p-4" style={{ background: "var(--n-50)" }}>
               {qrDataUrl ? (
-                <img src={qrDataUrl} alt="QR Code verification" className="w-40 h-40 mx-auto" />
+                <Image src={qrDataUrl} alt="QR Code verification" width={160} height={160} unoptimized className="w-40 h-40 mx-auto" />
               ) : (
                 <div className="w-40 h-40 grid place-items-center text-sm" style={{ color: "var(--tx-muted)" }}>
                   QR indisponible

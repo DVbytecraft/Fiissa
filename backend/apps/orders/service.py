@@ -8,9 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-logger = logging.getLogger(__name__)
-
-from sqlalchemy import select, func, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,13 +23,13 @@ from core.exceptions import (
     InsufficientStock,
     InvalidOrderTransition,
     NotFoundError,
-    OrderNotCancellable,
     ProductNotAvailable,
-    TenantAccessDenied,
 )
 from apps.notifications.service import AuditService, NotificationCenterService
 from core.permissions import Role, can_transition_order
 from core.security import generate_pickup_code, generate_verification_code
+
+logger = logging.getLogger(__name__)
 
 
 class OrderService:
@@ -126,12 +124,14 @@ class OrderService:
         order_type: str,
         notes: Optional[str] = None,
         delivery_address: Optional[dict] = None,
+        coupon_code: Optional[str] = None,
     ) -> Order:
         """
         Crée une commande depuis le panier.
         - Vérifie la disponibilité et le stock de chaque produit
         - Réserve le stock (stock_reserved ++)
         - Génère le numéro de commande
+        - Applique le coupon de réduction si fourni
         """
         cart = await self.get_or_create_cart(customer_id, store_id, company_id)
 
@@ -176,6 +176,32 @@ class OrderService:
                 delivery_fee = store.delivery_fee_xof or 0
 
         total = subtotal + delivery_fee
+
+        # Application du coupon de fidélité si fourni
+        # Le coupon est calculé ici mais marqué utilisé APRÈS création de la commande
+        # pour pouvoir assigner coupon.order_id = order.id
+        coupon_to_apply = None
+        coupon_applied_at: Optional[datetime] = None
+        if coupon_code:
+            from apps.loyalty.service import LoyaltyCouponService
+            coupon_service = LoyaltyCouponService(self.db)
+            try:
+                coupon = await coupon_service.get_by_code(company_id, coupon_code)
+                if coupon and not coupon.is_used:
+                    _now = datetime.now(timezone.utc)
+                    if not coupon.expires_at or coupon.expires_at > _now:
+                        if coupon.customer_id == customer_id:
+                            if not coupon.min_order_xof or total >= coupon.min_order_xof:
+                                if coupon.discount_type == "pct":
+                                    discount = int(total * float(coupon.discount_value) / 100)
+                                else:
+                                    discount = int(coupon.discount_value)
+                                total = max(0, total - discount)
+                                coupon_to_apply = coupon
+                                coupon_applied_at = _now
+            except Exception:
+                pass  # coupon invalide → on ignore silencieusement
+
         order_number = await self._generate_order_number(company_id)
 
         order = Order(
@@ -200,6 +226,12 @@ class OrderService:
 
         self.db.add(order)
         await self.db.flush()
+
+        # Lier le coupon à la commande maintenant que order.id existe
+        if coupon_to_apply is not None:
+            coupon_to_apply.is_used = True
+            coupon_to_apply.used_at = coupon_applied_at
+            coupon_to_apply.order_id = order.id
 
         # Créer les items + réserver le stock
         for item_data in order_items_data:
@@ -309,8 +341,8 @@ class OrderService:
             order.prepared_at = now
 
         elif to_status in ("cancelled", "refunded"):
-            if from_status not in ("draft", "pending", "awaiting_payment", "payment_submitted"):
-                # Libérer le stock réservé
+            # Libérer le stock réservé pour TOUTE annulation (sauf draft qui n'a pas réservé)
+            if from_status != "draft":
                 await self._release_stock_for_order(order, company_id)
             order.cancelled_by_id = acting_user.id
             order.cancelled_at = now
@@ -427,7 +459,7 @@ class OrderService:
             quantity_before=before,
             quantity_after=locked_product.stock_reserved,
             created_by_id=user_id,
-            notes=f"Réservation commande",
+            notes="Réservation commande",
         )
         self.db.add(movement)
 
@@ -513,7 +545,7 @@ class OrderService:
             select(Product).where(
                 Product.id == product_id,
                 Product.company_id == company_id,
-                Product.is_deleted == False,
+                Product.is_deleted.is_(False),
             )
         )
         product = result.scalar_one_or_none()
@@ -566,7 +598,7 @@ class OrderService:
                 select(Product).where(
                     Product.company_id == company_id,
                     Product.barcode == barcode,
-                    Product.is_deleted == False,
+                    Product.is_deleted.is_(False),
                 )
             )
             product = prod_result.scalar_one_or_none()

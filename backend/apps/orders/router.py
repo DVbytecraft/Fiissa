@@ -9,12 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from apps.notifications.models import AuditLog
-from apps.orders.models import Cart, CartItem, Order, OrderItem, Pickup
+from apps.orders.models import Order, OrderItem, Pickup
 from apps.orders.service import OrderService
 from core.database import get_db
 from core.dependencies import get_current_user, get_tenant_context, TenantContext, require_permission
 from core.exceptions import NotFoundError, TenantAccessDenied
-from core.pagination import PaginatedResponse, PaginationParams
+from core.pagination import PaginatedResponse
 
 
 class AddToCartRequest(BaseModel):
@@ -28,6 +28,7 @@ class CreateOrderRequest(BaseModel):
     order_type: str = "click_collect"
     notes: Optional[str] = None
     delivery_address: Optional[dict] = None
+    coupon_code: Optional[str] = None
 
 
 class ScanGoItem(BaseModel):
@@ -250,6 +251,7 @@ async def create_order(
         order_type=data.order_type,
         notes=data.notes,
         delivery_address=data.delivery_address,
+        coupon_code=data.coupon_code,
     )
 
     # Persister la clé d'idempotence sur la commande créée
@@ -538,7 +540,7 @@ async def get_order_detail(
             sa_select(UserCompanyRole).where(
                 UserCompanyRole.user_id == current_user.id,
                 UserCompanyRole.company_id == order.company_id,
-                UserCompanyRole.is_active == True,
+                UserCompanyRole.is_active,
             )
         )
         role = role_result.scalar_one_or_none()

@@ -82,8 +82,6 @@ def main():
 
     # Try Pillow + cairosvg via subprocess fallback
     try:
-        from PIL import Image
-        import io
         import subprocess
         print("  Pillow détecté — tentative via inkscape CLI")
         for size in SIZES:

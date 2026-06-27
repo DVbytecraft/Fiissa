@@ -27,6 +27,7 @@ from apps.loyalty.schemas import (
     TierResponse,
     UpdateProgramRequest,
 )
+from sqlalchemy import select
 from apps.loyalty.service import (
     CardTemplateService,
     CustomerIntelligenceService,
@@ -37,8 +38,10 @@ from apps.loyalty.service import (
     LoyaltyTierService,
     LoyaltyTransactionService,
 )
+from apps.orders.models import Order as OrderModel
 from core.database import get_db
-from core.dependencies import get_current_user, require_permission
+from core.dependencies import require_permission
+from core.exceptions import NotFoundError, TenantAccessDenied
 
 router = APIRouter(prefix="/loyalty", tags=["Fidélité"])
 
@@ -188,6 +191,35 @@ async def list_card_templates(
 
 # ── Cartes ─────────────────────────────────────────────────────────────────────
 
+@router.get("/cards/scan/{card_number}", response_model=LoyaltyCardResponse)
+async def scan_card(
+    card_number: str,
+    current_user=Depends(require_permission("loyalty.read_own")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Client scanne une carte physique (QR code ou numéro).
+    Si la carte existe et n'est pas déjà liée à un compte, l'importe dans le compte du client.
+    Si déjà liée, retourne la carte existante (anti-duplication).
+    """
+    service = LoyaltyCardService(db)
+    return await service.import_by_scan(current_user.id, card_number)
+
+
+@router.get("/card-for-company/{company_id}")
+async def get_card_for_company(
+    company_id: UUID,
+    current_user=Depends(require_permission("loyalty.read_own")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Vérifie si le client a une carte de fidélité chez une entreprise spécifique.
+    Retourne la carte avec les points, le tier, et le programme si actif.
+    """
+    service = LoyaltyCardService(db)
+    return await service.get_card_for_company(current_user.id, company_id)
+
+
 @router.post("/cards/issue", response_model=LoyaltyCardResponse)
 async def issue_native_card(
     data: IssueNativeCardRequest,
@@ -325,9 +357,12 @@ async def apply_coupon(
     current_user=Depends(require_permission("loyalty.coupons.issue")),
     db: AsyncSession = Depends(get_db),
 ):
-    company_id = current_user._active_company_id
+    """
+    Applique un coupon de fidélité côté marchand.
+    La commande peut être déjà persistée ou simplement référencée par son UUID.
+    """
     service = LoyaltyCouponService(db)
-    return await service.apply(company_id, code, order_id)
+    return await service.apply(current_user._active_company_id, code, order_id)
 
 
 # ── Intelligence clients (Sprint 5) ───────────────────────────────────────────

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import select
@@ -45,7 +44,7 @@ class SubscriptionService:
     async def change_plan(self, company_id: UUID, plan_code: str) -> Subscription:
         subscription = await self.get_or_create_subscription(company_id)
         result = await self.db.execute(
-            select(Plan).where(Plan.code == plan_code, Plan.is_active == True)
+            select(Plan).where(Plan.code == plan_code, Plan.is_active)
         )
         plan = result.scalar_one_or_none()
         if not plan:

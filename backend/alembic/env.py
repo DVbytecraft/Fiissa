@@ -16,6 +16,10 @@ import apps.payments.models  # noqa
 import apps.receipts.models  # noqa
 import apps.notifications.models  # noqa
 import apps.integrations.models  # noqa
+import apps.loyalty.models  # noqa
+import apps.wallet.models  # noqa
+import apps.promotions.models  # noqa
+import apps.support.models  # noqa
 
 config = context.config
 

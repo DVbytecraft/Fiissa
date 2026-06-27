@@ -152,6 +152,7 @@ export default function SuperAdminCompaniesPage() {
     queryFn: () => superadminApi.getRegistrationRequests({ status: "pending" }).then((r) => r.data),
     enabled: activeTab === "requests",
   });
+  const registrationRequests = requestsData?.items ?? [];
 
   const approveMutation = useMutation({
     mutationFn: (requestId: string) => superadminApi.approveRegistrationRequest(requestId),
@@ -252,7 +253,7 @@ export default function SuperAdminCompaniesPage() {
       <div className="flex px-4 pt-4 gap-2">
         {[
           { key: "companies" as PageTab, label: "Entreprises" },
-          { key: "requests" as PageTab, label: "Demandes", badge: requestsData?.length ?? null },
+          { key: "requests" as PageTab, label: "Demandes", badge: registrationRequests.length },
         ].map(({ key, label, badge }) => (
           <button
             key={key}
@@ -286,7 +287,7 @@ export default function SuperAdminCompaniesPage() {
             </div>
           ))}
 
-          {!requestsLoading && (!requestsData || requestsData.length === 0) && (
+          {!requestsLoading && registrationRequests.length === 0 && (
             <div className="text-center py-16">
               <Clock size={56} style={{ color: "var(--bd)" }} className="mx-auto mb-4" />
               <p style={{ color: "var(--tx-head)" }} className="font-bold">Aucune demande en attente</p>
@@ -296,7 +297,7 @@ export default function SuperAdminCompaniesPage() {
             </div>
           )}
 
-          {(requestsData ?? []).map((req: any) => (
+          {registrationRequests.map((req: any) => (
             <div
               key={req.id}
               className="rounded-[28px] overflow-hidden"
@@ -312,7 +313,7 @@ export default function SuperAdminCompaniesPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm" style={{ color: "var(--tx-head)" }}>{req.company_name}</p>
                   <p className="text-xs mt-0.5" style={{ color: "var(--tx-muted)" }}>
-                    {req.contact_email} {req.contact_phone ? `· ${req.contact_phone}` : ""}
+                    {req.email} {req.phone ? `· ${req.phone}` : ""}
                   </p>
                   {req.company_type && (
                     <p className="text-xs mt-1" style={{ color: "var(--tx-muted)" }}>

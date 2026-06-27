@@ -40,12 +40,19 @@ class WalletService:
                 code="wallet_method_disabled",
             )
 
+        company_id = data.get("company_id")
+        if company_id:
+            from apps.companies.models import Company
+            company_result = await self.db.execute(select(Company).where(Company.id == company_id, Company.is_active))
+            if not company_result.scalar_one_or_none():
+                raise BadRequestError("Entreprise invalide ou inactive", code="invalid_company")
+
         if data.get("is_default"):
-            await self._clear_default_methods(customer_id, data.get("company_id"))
+            await self._clear_default_methods(customer_id, company_id)
 
         method = WalletPaymentMethod(
             customer_id=customer_id,
-            company_id=data.get("company_id"),
+            company_id=company_id,
             method_type=method_type,
             operator=data.get("operator"),
             phone_number=data.get("phone_number"),

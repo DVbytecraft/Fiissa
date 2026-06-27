@@ -3,15 +3,28 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.integrations.models import WebhookDelivery, WebhookEndpoint
-from apps.integrations.service import WebhookService
+from apps.integrations.models import (
+    ApiCredential,
+    ApiIntegration,
+    MerchantApiKey,
+    WebhookDelivery,
+    WebhookEndpoint,
+    WEBHOOK_EVENT_TYPES,
+)
 from core.database import get_db
-from core.dependencies import get_tenant_context, require_permission
-from core.exceptions import NotFoundError, TenantAccessDenied
-from core.secrets import encrypt_secret
+from core.dependencies import generate_merchant_api_key, get_tenant_context, require_permission
+from core.exceptions import BadRequestError, NotFoundError, TenantAccessDenied
+from core.secrets import encrypt_secret, mask_secret
+
+
+def _validate_events(events: list[str]) -> None:
+    """Valide que tous les événements sont supportés."""
+    invalid = [e for e in events if e not in WEBHOOK_EVENT_TYPES]
+    if invalid:
+        raise BadRequestError(f"Événements non supportés : {', '.join(invalid)}. Événements valides : {', '.join(WEBHOOK_EVENT_TYPES)}")
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
 
@@ -23,6 +36,10 @@ class WebhookEndpointUpsert(BaseModel):
     secret: Optional[str] = None
     is_active: bool = True
 
+class PaymentIntegrationUpsert(BaseModel):
+    provider: str # "paygate" ou "fedapay"
+    credentials: dict[str, str]
+
 
 class WebhookEndpointUpdate(BaseModel):
     name: Optional[str] = None
@@ -31,6 +48,168 @@ class WebhookEndpointUpdate(BaseModel):
     secret: Optional[str] = None
     is_active: Optional[bool] = None
 
+
+@router.get("/api-key", summary="Récupérer la clé API Fiissa du marchand")
+async def get_merchant_api_key_info(
+    tenant=Depends(get_tenant_context),
+    current_user=Depends(require_permission("integrations.read")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retourne la clé API Fiissa du marchand (masquée).
+    Si aucune clé n'existe encore, en génère une automatiquement.
+    La clé complète n'est visible qu'à la création ou à la régénération.
+    """
+    result = await db.execute(
+        select(MerchantApiKey).where(
+            MerchantApiKey.company_id == tenant.company_id,
+            MerchantApiKey.is_active,
+        )
+    )
+    key = result.scalar_one_or_none()
+
+    if not key:
+        full_key, key_hash, masked = generate_merchant_api_key()
+        key = MerchantApiKey(
+            company_id=tenant.company_id,
+            key_hash=key_hash,
+            masked_preview=masked,
+        )
+        db.add(key)
+        await db.commit()
+        await db.refresh(key)
+        return {
+            "api_key": full_key,
+            "masked_preview": masked,
+            "created_at": key.created_at.isoformat() if key.created_at else None,
+            "last_used_at": None,
+            "first_reveal": True,
+        }
+
+    return {
+        "api_key": key.masked_preview,
+        "masked_preview": key.masked_preview,
+        "created_at": key.created_at.isoformat() if key.created_at else None,
+        "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+        "first_reveal": False,
+    }
+
+
+@router.post("/api-key/regenerate", summary="Régénérer la clé API Fiissa du marchand")
+async def regenerate_merchant_api_key_endpoint(
+    tenant=Depends(get_tenant_context),
+    current_user=Depends(require_permission("integrations.manage")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Révoque l'ancienne clé et génère une nouvelle.
+    La clé complète est retournée UNE SEULE FOIS — elle ne sera plus jamais affichée.
+    """
+    result = await db.execute(
+        select(MerchantApiKey).where(MerchantApiKey.company_id == tenant.company_id)
+    )
+    existing = result.scalars().all()
+    for k in existing:
+        k.is_active = False
+
+    full_key, key_hash, masked = generate_merchant_api_key()
+    new_key = MerchantApiKey(
+        company_id=tenant.company_id,
+        key_hash=key_hash,
+        masked_preview=masked,
+    )
+    db.add(new_key)
+    await db.commit()
+    await db.refresh(new_key)
+
+    return {
+        "api_key": full_key,
+        "masked_preview": masked,
+        "created_at": new_key.created_at.isoformat() if new_key.created_at else None,
+        "message": "Clé API régénérée. L'ancienne clé est révoquée immédiatement.",
+    }
+
+
+@router.get("/payment", summary="Récupérer la configuration de paiement")
+async def get_payment_integration(
+    tenant=Depends(get_tenant_context),
+    current_user=Depends(require_permission("integrations.read")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Récupère la passerelle de paiement configurée par le marchand."""
+    result = await db.execute(
+        select(ApiIntegration)
+        .where(
+            ApiIntegration.company_id == tenant.company_id,
+            ApiIntegration.integration_type == "payment",
+            ApiIntegration.is_active,
+        )
+    )
+    integration = result.scalar_one_or_none()
+    if not integration:
+        return None
+
+    creds_result = await db.execute(
+        select(ApiCredential).where(ApiCredential.integration_id == integration.id)
+    )
+    creds = creds_result.scalars().all()
+
+    return {
+        "provider": integration.name,
+        "credentials": [{"key_name": c.key_name, "masked": c.masked_preview} for c in creds],
+    }
+
+@router.post("/payment", summary="Configurer la passerelle de paiement")
+async def upsert_payment_integration(
+    data: PaymentIntegrationUpsert,
+    tenant=Depends(get_tenant_context),
+    current_user=Depends(require_permission("integrations.manage")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permet au marchand de lier son compte PayGate ou FedaPay."""
+    # Désactiver les anciennes intégrations de paiement
+    result = await db.execute(
+        select(ApiIntegration)
+        .where(
+            ApiIntegration.company_id == tenant.company_id,
+            ApiIntegration.integration_type == "payment",
+        )
+    )
+    existing_integs = result.scalars().all()
+    for integ in existing_integs:
+        integ.is_active = False
+        # Désactiver les credentials associés
+        await db.execute(
+            update(ApiCredential)
+            .where(ApiCredential.integration_id == integ.id)
+            .values(is_active=False)
+        )
+
+    # Créer la nouvelle intégration
+    integration = ApiIntegration(
+        company_id=tenant.company_id,
+        integration_type="payment",
+        name=data.provider,
+        endpoint_url=f"https://{data.provider}.com",
+        is_active=True,
+    )
+    db.add(integration)
+    await db.flush()
+
+    for key, value in data.credentials.items():
+        if not value:
+            continue
+        cred = ApiCredential(
+            integration_id=integration.id,
+            key_name=key,
+            encrypted_secret=encrypt_secret(value),
+            masked_preview=mask_secret(value),
+            is_active=True,
+        )
+        db.add(cred)
+
+    await db.commit()
+    return {"message": "Configuration de paiement mise à jour avec succès"}
 
 @router.get("/webhooks")
 async def list_webhooks(
@@ -66,6 +245,8 @@ async def create_webhook(
     current_user=Depends(require_permission("webhooks.create")),
     db: AsyncSession = Depends(get_db),
 ):
+    _validate_events(data.events)
+
     endpoint = WebhookEndpoint(
         company_id=tenant.company_id,
         name=data.name,
@@ -95,6 +276,8 @@ async def update_webhook(
         raise TenantAccessDenied()
 
     update_data = data.model_dump(exclude_none=True)
+    if "events" in update_data:
+        _validate_events(update_data["events"])
     for field, value in update_data.items():
         if field == "secret":
             endpoint.secret_encrypted = encrypt_secret(value)
@@ -151,7 +334,7 @@ async def list_webhook_deliveries(
 
 
 @router.post("/webhooks/{endpoint_id}/test")
-async def test_webhook(
+async def send_test_webhook(
     endpoint_id: UUID,
     tenant=Depends(get_tenant_context),
     current_user=Depends(require_permission("webhooks.update")),
@@ -172,6 +355,12 @@ async def test_webhook(
         status="pending",
     )
     db.add(delivery)
-    await db.flush()
-    await WebhookService.deliver_delivery(delivery.id, db)
-    return {"message": "Webhook teste"}
+    await db.commit()  # Commit avant l'appel HTTP pour libérer la connexion DB
+
+    # Délégue la livraison à Celery pour ne pas bloquer la connexion DB
+    from workers.tasks import deliver_webhook
+    try:
+        deliver_webhook.delay(str(delivery.id))
+        return {"message": "Test webhook envoyé", "delivery_id": str(delivery.id)}
+    except Exception:
+        return {"message": "Test webhook planifié (Celery indisponible)", "delivery_id": str(delivery.id)}

@@ -6,7 +6,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.companies.models import Company

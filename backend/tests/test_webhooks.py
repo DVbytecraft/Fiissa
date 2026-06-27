@@ -12,7 +12,6 @@ import json
 import pytest
 import httpx
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 
 @pytest.fixture
@@ -42,8 +41,7 @@ async def test_dispatch_event_creates_delivery(db, company, webhook_endpoint):
     from apps.integrations.service import WebhookService
     from sqlalchemy import select
 
-    endpoint = await webhook_endpoint()
-
+    await webhook_endpoint()
     service = WebhookService(db)
 
     # Mock Celery deliver_webhook.delay

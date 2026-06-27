@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 # ── LoyaltyProgram ─────────────────────────────────────────────────────────────
@@ -120,9 +120,17 @@ class LoyaltyCardResponse(BaseModel):
     points_balance: int
     card_type: str
     external_issuer: Optional[str]
+    external_ref: Optional[str] = None
     status: str
     issued_at: datetime
     expires_at: Optional[datetime]
+    # Champs enrichis pour l'affichage frontend
+    company_name: Optional[str] = None
+    program_name: Optional[str] = None
+    tier_name: Optional[str] = None
+    background_color: Optional[str] = "#1A1A2E"
+    text_color: Optional[str] = "#FFFFFF"
+    logo_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -136,7 +137,7 @@ export default function EspaceClientPage() {
                     style={{ background: "var(--bg-app)" }}
                   >
                     {info.logoUrl ? (
-                      <img src={info.logoUrl} alt={info.name} className="w-full h-full object-cover" />
+                      <Image src={info.logoUrl} alt={info.name} fill unoptimized className="object-cover" sizes="48px" />
                     ) : (
                       <Store size={22} style={{ color: "var(--tx-muted)" }} />
                     )}

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Webhook,
@@ -37,6 +37,119 @@ const CATALOG_MODES = [
   { value: "external_api", label: "API externe", desc: "ERP / POS externe" },
   { value: "hybrid", label: "Hybride", desc: "API externe + fallback interne" },
 ];
+
+function PaymentSection() {
+  const [provider, setProvider] = useState("paygate");
+  const [publicKey, setPublicKey] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["payment-integration"],
+    queryFn: () => integrationsApi.getPaymentIntegration().then((r) => r.data),
+  });
+
+  useEffect(() => {
+    if (!data) return;
+    setProvider(data.provider || "paygate");
+  }, [data]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      integrationsApi.savePaymentIntegration({
+        provider,
+        credentials: {
+          public_key: publicKey,
+          secret_key: secretKey,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Configuration paiement enregistrée");
+      setPublicKey("");
+      setSecretKey("");
+      queryClient.invalidateQueries({ queryKey: ["payment-integration"] });
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || "Erreur configuration paiement"),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }} className="rounded-2xl p-4">
+        <h3 style={{ color: "var(--tx-head)" }} className="font-bold mb-3">
+          Passerelle de paiement
+        </h3>
+
+        <div className="space-y-3">
+          <div>
+            <label style={{ color: "var(--tx-muted)" }} className="text-xs font-semibold mb-1.5 block">
+              Fournisseur
+            </label>
+            <select value={provider} onChange={(e) => setProvider(e.target.value)} className="input-mobile">
+              <option value="paygate">PayGate</option>
+              <option value="fedapay">FedaPay</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ color: "var(--tx-muted)" }} className="text-xs font-semibold mb-1.5 block">
+              Clé publique / identifiant
+            </label>
+            <input
+              type="text"
+              value={publicKey}
+              onChange={(e) => setPublicKey(e.target.value)}
+              placeholder="Laisser vide pour conserver l'existant"
+              className="input-mobile"
+            />
+          </div>
+
+          <div>
+            <label style={{ color: "var(--tx-muted)" }} className="text-xs font-semibold mb-1.5 block">
+              Clé secrète
+            </label>
+            <input
+              type="password"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              placeholder="Laisser vide pour conserver l'existant"
+              className="input-mobile"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl p-3" style={{ background: "var(--bg-app)" }}>
+          {isLoading ? (
+            <div className="skeleton h-10 w-full rounded-xl" />
+          ) : data ? (
+            <div className="space-y-1">
+              <p style={{ color: "var(--tx-head)" }} className="text-sm font-semibold">
+                Actif: {data.provider || "Non configuré"}
+              </p>
+              <p style={{ color: "var(--tx-muted)" }} className="text-xs">
+                {Array.isArray(data.credentials) && data.credentials.length > 0
+                  ? data.credentials.map((c: any) => `${c.key_name}: ${c.masked}`).join(" • ")
+                  : "Aucune clé masquée disponible"}
+              </p>
+            </div>
+          ) : (
+            <p style={{ color: "var(--tx-muted)" }} className="text-sm">
+              Aucune passerelle active pour le moment.
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={() => saveMutation.mutate()}
+          disabled={saveMutation.isPending}
+          style={{ background: "var(--p-500)" }}
+          className="mt-4 w-full py-3 text-white rounded-xl font-bold disabled:opacity-50"
+        >
+          {saveMutation.isPending ? "Enregistrement..." : "Enregistrer la passerelle"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function WebhookModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
@@ -348,7 +461,7 @@ function ApiKeySection() {
 
 export default function MerchantIntegrationsPage() {
   const [showWebhookModal, setShowWebhookModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"webhooks" | "catalog" | "api_key">("webhooks");
+  const [activeTab, setActiveTab] = useState<"webhooks" | "catalog" | "payment" | "api_key">("webhooks");
   const [confirmWebhook, setConfirmWebhook] = useState<{ id: string; name: string } | null>(null);
   const queryClient = useQueryClient();
 
@@ -413,6 +526,7 @@ export default function MerchantIntegrationsPage() {
           {[
             { id: "webhooks", label: "Webhooks" },
             { id: "catalog", label: "Catalogue API" },
+            { id: "payment", label: "Paiement" },
             { id: "api_key", label: "Clé API" },
           ].map((tab) => (
             <button
@@ -746,6 +860,9 @@ export default function MerchantIntegrationsPage() {
             </div>
           </div>
         )}
+        {/* ── PAIEMENT ── */}
+        {activeTab === "payment" && <PaymentSection />}
+
         {/* ── CLÉ API ── */}
         {activeTab === "api_key" && <ApiKeySection />}
       </div>

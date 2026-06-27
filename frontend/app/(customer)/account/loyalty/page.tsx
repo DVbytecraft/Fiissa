@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,7 +13,7 @@ import {
   ChevronUp,
   Plus,
   QrCode,
-  Sparkles,
+  Scan,
   X,
 } from "lucide-react";
 import { loyaltyApi } from "@/lib/api";
@@ -20,6 +21,43 @@ import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { QrScanner } from "@/components/ui/qr-scanner";
+import LoyaltyCard from "@/components/loyalty/loyalty-card";
+
+// ── Scanner carte physique Fiissa ────────────────────────────────────────────
+
+function ScanFiissaSheet({ onClose }: { onClose: () => void }) {
+  const [scanned, setScanned] = useState(false);
+  const queryClient = useQueryClient();
+
+  const scanMutation = useMutation({
+    mutationFn: (cardNumber: string) =>
+      loyaltyApi.scanCard(cardNumber).then((r) => r.data),
+    onSuccess: () => {
+      toast.success("Carte physique liée à votre compte");
+      queryClient.invalidateQueries({ queryKey: ["my-loyalty-cards"] });
+      onClose();
+    },
+    onError: (e: any) => {
+      setScanned(false);
+      if (e.response?.status === 409) {
+        toast.error("Cette carte est déjà liée à un autre compte");
+      } else {
+        toast.error(e.response?.data?.detail || "Erreur de lecture de carte");
+      }
+    },
+  });
+
+  return (
+    <QrScanner
+      onScan={(value) => {
+        if (scanned || scanMutation.isPending) return;
+        setScanned(true);
+        scanMutation.mutate(value);
+      }}
+      onClose={onClose}
+    />
+  );
+}
 
 // ── Import externe (formulaire) ──────────────────────────────────────────────
 
@@ -150,6 +188,7 @@ export default function LoyaltyPage() {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [qrCache, setQrCache] = useState<Record<string, string>>({});
   const [showImport, setShowImport] = useState(false);
+  const [showScanFiissa, setShowScanFiissa] = useState(false);
   const { user } = useAuthStore();
 
   const { data, isLoading } = useQuery({
@@ -207,6 +246,15 @@ export default function LoyaltyPage() {
           </p>
         </div>
         <button
+          onClick={() => setShowScanFiissa(true)}
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ background: "var(--n-100)", color: "var(--tx-head)" }}
+          aria-label="Scanner une carte physique Fiissa"
+          title="Scanner une carte physique Fiissa"
+        >
+          <Scan size={18} />
+        </button>
+        <button
           onClick={() => setShowImport(true)}
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{ background: "var(--p-500)", color: "#fff" }}
@@ -233,15 +281,28 @@ export default function LoyaltyPage() {
             </p>
             <div className="space-y-3">
               {nativeCards.map((card) => (
-                <CardItem
-                  key={card.id}
-                  card={card}
-                  isExpanded={expandedCardId === card.id}
-                  qrDataUrl={qrCache[card.card_number]}
-                  transactions={expandedCardId === card.id ? transactions : []}
-                  txLoading={expandedCardId === card.id && txLoading}
-                  onExpand={() => handleExpand(card)}
-                />
+                <div key={card.id} className="space-y-1">
+                  <LoyaltyCard
+                    customerName={user?.firstName + " " + user?.lastName || "Client"}
+                    companyName={card.company_name || "Fiissa"}
+                    points={card.points_balance}
+                    cardNumber={card.card_number}
+                    tierName={card.tier_name}
+                    backgroundColor={card.background_color}
+                    textColor={card.text_color}
+                    logoUrl={card.logo_url}
+                    isActive={card.status === "active"}
+                  />
+                  <CardActions card={card} isExpanded={expandedCardId === card.id} onExpand={() => handleExpand(card)} />
+                  {expandedCardId === card.id && (
+                     <CardDetails
+                      card={card}
+                      qrDataUrl={qrCache[card.card_number]}
+                      transactions={transactions}
+                      txLoading={txLoading}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </section>
@@ -255,15 +316,27 @@ export default function LoyaltyPage() {
             </p>
             <div className="space-y-3">
               {externalCards.map((card) => (
-                <CardItem
-                  key={card.id}
-                  card={card}
-                  isExpanded={expandedCardId === card.id}
-                  qrDataUrl={qrCache[card.card_number]}
-                  transactions={[]}
-                  txLoading={false}
-                  onExpand={() => handleExpand(card)}
-                />
+                 <div key={card.id} className="space-y-1">
+                  <LoyaltyCard
+                    customerName={user?.firstName + " " + user?.lastName || "Client"}
+                    companyName={card.external_issuer || "Externe"}
+                    points={0}
+                    cardNumber={card.card_number}
+                    backgroundColor={card.background_color}
+                    textColor={card.text_color}
+                    logoUrl={card.logo_url}
+                    isActive={card.status === "active"}
+                  />
+                  <CardActions card={card} isExpanded={expandedCardId === card.id} onExpand={() => handleExpand(card)} />
+                  {expandedCardId === card.id && (
+                     <CardDetails
+                      card={card}
+                      qrDataUrl={qrCache[card.card_number]}
+                      transactions={[]}
+                      txLoading={false}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </section>
@@ -324,6 +397,10 @@ export default function LoyaltyPage() {
         )}
       </div>
 
+      {showScanFiissa && (
+        <ScanFiissaSheet onClose={() => setShowScanFiissa(false)} />
+      )}
+
       {showImport && user?.id && (
         <ImportCardSheet customerId={user.id} onClose={() => setShowImport(false)} />
       )}
@@ -333,157 +410,105 @@ export default function LoyaltyPage() {
 
 // ── Composant carte (extrait pour clarté) ────────────────────────────────────
 
-function CardItem({
+function CardActions({
   card,
   isExpanded,
-  qrDataUrl,
-  transactions,
-  txLoading,
   onExpand,
 }: {
   card: any;
   isExpanded: boolean;
+  onExpand: () => void;
+}) {
+  return (
+    <button
+      className="w-full flex items-center justify-center gap-2 py-2 rounded-xl mt-1 transition-colors"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--bd)", color: "var(--tx-muted)" }}
+      onClick={onExpand}
+    >
+      <BadgePercent size={16} />
+      <span className="text-xs font-semibold">{isExpanded ? "Masquer les détails" : "Voir détails et QR code"}</span>
+      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+    </button>
+  );
+}
+
+function CardDetails({
+  card,
+  qrDataUrl,
+  transactions,
+  txLoading,
+}: {
+  card: any;
   qrDataUrl?: string;
   transactions: any[];
   txLoading: boolean;
-  onExpand: () => void;
 }) {
   const isNative = card.card_type === "native";
-  const cardTitle = isNative ? "Carte Fiissa" : card.external_issuer || "Carte externe";
-
-  const cardBg = isNative
-    ? "linear-gradient(135deg, #0F172A 0%, #2257FF 100%)"
-    : "linear-gradient(135deg, #1E3A5F 0%, #4A4A6A 100%)";
-
   return (
-    <div>
-      {/* Face de la carte */}
-      <button
-        className="w-full text-left rounded-3xl p-5 relative overflow-hidden active:scale-[0.98] transition-transform"
-        style={{ background: cardBg, color: "#fff" }}
-        onClick={onExpand}
-      >
-        {/* Cercles décoratifs */}
-        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)" }} />
-        <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)" }} />
-
-        <div className="flex items-center justify-between mb-8 relative">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold" style={{ opacity: 0.75 }}>
-              {cardTitle}
-            </span>
-            {card.tier_id && (
-              <span
-                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "rgba(255,215,0,0.2)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.4)" }}
-              >
-                <Sparkles size={9} />
-                Premium
-              </span>
-            )}
-            {!isNative && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)" }}
-              >
-                Externe
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <BadgePercent size={17} style={{ opacity: 0.8 }} />
-            {isExpanded ? <ChevronUp size={14} style={{ opacity: 0.6 }} /> : <ChevronDown size={14} style={{ opacity: 0.6 }} />}
-          </div>
+    <div
+      className="rounded-2xl p-4 mt-1 space-y-4"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
+    >
+      {/* QR Code */}
+      <div className="flex flex-col items-center py-2">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: "rgba(34,87,255,0.08)" }}>
+          <QrCode size={20} style={{ color: "var(--p-500)" }} />
         </div>
+        <p className="text-xs font-semibold mb-3 text-center" style={{ color: "var(--tx-muted)" }}>
+          {isNative ? "QR code pour paiement en caisse" : "QR code de la carte"}
+        </p>
+        {qrDataUrl ? (
+          <Image
+            src={qrDataUrl}
+            alt="QR code fidélité"
+            width={160}
+            height={160}
+            unoptimized
+            className="w-40 h-40 rounded-xl"
+            style={{ border: "4px solid white", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+          />
+        ) : (
+          <div className="w-40 h-40 rounded-xl skeleton" />
+        )}
+      </div>
 
-        <p className="text-xs mb-1 relative" style={{ opacity: 0.6 }}>Numéro</p>
-        <p className="font-mono tracking-[0.12em] text-sm mb-5 relative">{card.card_number}</p>
+      {/* Transactions (natives seulement) */}
+      {isNative && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--tx-muted)" }}>
+            Dernières transactions
+          </p>
 
-        <div className="flex items-end justify-between relative">
-          <div>
-            <p className="text-xs mb-1" style={{ opacity: 0.6 }}>
-              {isNative ? "Points" : "Carte référencée"}
+          {txLoading && <div className="skeleton h-14 w-full rounded-xl" />}
+
+          {!txLoading && transactions.length === 0 && (
+            <p className="text-sm text-center py-3" style={{ color: "var(--tx-muted)" }}>
+              Aucune transaction pour l'instant
             </p>
-            {isNative ? (
-              <p className="text-3xl font-semibold">{card.points_balance.toLocaleString("fr-FR")}</p>
-            ) : (
-              <p className="text-lg font-bold">{card.external_issuer}</p>
-            )}
-          </div>
-          <div className="text-right">
-            <p className="text-xs mb-1" style={{ opacity: 0.6 }}>Statut</p>
-            <p className="font-semibold" style={{ color: card.status === "active" ? "#4ADE80" : "#FCA5A5" }}>
-              {card.status === "active" ? "Actif" : card.status}
-            </p>
-          </div>
-        </div>
-      </button>
-
-      {/* Panneau étendu */}
-      {isExpanded && (
-        <div
-          className="rounded-2xl p-4 mt-1 space-y-4"
-          style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
-        >
-          {/* QR Code */}
-          <div className="flex flex-col items-center py-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ background: "rgba(34,87,255,0.08)" }}>
-              <QrCode size={20} style={{ color: "var(--p-500)" }} />
-            </div>
-            <p className="text-xs font-semibold mb-3 text-center" style={{ color: "var(--tx-muted)" }}>
-              {isNative ? "QR code pour paiement en caisse" : "QR code de la carte"}
-            </p>
-            {qrDataUrl ? (
-              <img
-                src={qrDataUrl}
-                alt="QR code fidélité"
-                className="w-40 h-40 rounded-xl"
-                style={{ border: "4px solid white", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
-              />
-            ) : (
-              <div className="w-40 h-40 rounded-xl skeleton" />
-            )}
-          </div>
-
-          {/* Transactions (natives seulement) */}
-          {isNative && (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--tx-muted)" }}>
-                Dernières transactions
-              </p>
-
-              {txLoading && <div className="skeleton h-14 w-full rounded-xl" />}
-
-              {!txLoading && transactions.length === 0 && (
-                <p className="text-sm text-center py-3" style={{ color: "var(--tx-muted)" }}>
-                  Aucune transaction pour l'instant
-                </p>
-              )}
-
-              {!txLoading && transactions.slice(0, 5).map((tx: any, i: number) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-2.5"
-                  style={{ borderBottom: i < Math.min(transactions.length, 5) - 1 ? "1px solid var(--bg-app)" : "none" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold truncate" style={{ color: "var(--tx-head)" }}>
-                      {tx.description || tx.type}
-                    </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
-                      {new Date(tx.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <p
-                    className="font-bold text-sm ml-3 flex-shrink-0"
-                    style={{ color: tx.points_delta > 0 ? "#00D68F" : "#F87171" }}
-                  >
-                    {tx.points_delta > 0 ? "+" : ""}{tx.points_delta} pts
-                  </p>
-                </div>
-              ))}
-            </div>
           )}
+
+          {!txLoading && transactions.slice(0, 5).map((tx: any, i: number) => (
+            <div
+              key={tx.id}
+              className="flex items-center justify-between py-2.5"
+              style={{ borderBottom: i < Math.min(transactions.length, 5) - 1 ? "1px solid var(--bg-app)" : "none" }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold truncate" style={{ color: "var(--tx-head)" }}>
+                  {tx.description || tx.type}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
+                  {new Date(tx.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                </p>
+              </div>
+              <p
+                className="font-bold text-sm ml-3 flex-shrink-0"
+                style={{ color: tx.points_delta > 0 ? "#00D68F" : "#F87171" }}
+              >
+                {tx.points_delta > 0 ? "+" : ""}{tx.points_delta} pts
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>

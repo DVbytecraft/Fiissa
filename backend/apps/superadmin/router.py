@@ -2,8 +2,11 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+from typing import Optional
+from uuid import UUID
 
-logger = logging.getLogger(__name__)
+
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,10 +19,11 @@ from apps.users.models import User, UserCompanyRole
 from core.database import get_db
 from core.dependencies import require_permission
 from core.exceptions import NotFoundError
-from pydantic import BaseModel
-from typing import Optional
-from uuid import UUID
 
+
+
+
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/superadmin", tags=["Super Admin"])
 
 
@@ -173,55 +177,6 @@ async def create_plan(
     db.add(plan)
     await db.flush()
     return {"id": str(plan.id), "code": plan.code}
-
-
-@router.post("/companies/{company_id}/suspend")
-async def suspend_company(
-    company_id: UUID,
-    data: SuspendCompanyRequest,
-    current_user=Depends(require_permission("*")),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company:
-        raise NotFoundError("Entreprise")
-
-    company.is_active = False
-    company.is_suspended = True
-
-    log = AuditLog(
-        user_id=current_user.id,
-        action="company.suspended",
-        resource_type="company",
-        resource_id=company.id,
-        new_data={"reason": data.reason, "is_suspended": True},
-    )
-    db.add(log)
-    return {"message": f"Entreprise '{company.name}' suspendue"}
-
-
-@router.post("/companies/{company_id}/activate")
-async def activate_company(
-    company_id: UUID,
-    current_user=Depends(require_permission("*")),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company:
-        raise NotFoundError("Entreprise")
-    company.is_active = True
-    company.is_suspended = False
-    log = AuditLog(
-        user_id=current_user.id,
-        action="company.activated",
-        resource_type="company",
-        resource_id=company.id,
-        new_data={"is_suspended": False},
-    )
-    db.add(log)
-    return {"message": f"Entreprise '{company.name}' activée"}
 
 
 @router.post("/staff")
@@ -422,7 +377,10 @@ async def platform_stats(
 
     total_companies = await db.execute(select(func.count(Company.id)))
     active_companies = await db.execute(
-        select(func.count(Company.id)).where(Company.is_active == True)
+        select(func.count(Company.id)).where(Company.is_active)
+    )
+    active_subscriptions = await db.execute(
+        select(func.count(Subscription.id)).where(Subscription.status.in_(["trial", "active"]))
     )
     total_users = await db.execute(select(func.count(User.id)))
     orders_this_month = await db.execute(
@@ -442,7 +400,7 @@ async def platform_stats(
     return {
         "total_companies": total_companies.scalar() or 0,
         "active_companies": active_companies.scalar() or 0,
-        "active_subscriptions": active_companies.scalar() or 0,
+        "active_subscriptions": active_subscriptions.scalar() or 0,
         "total_users": total_users.scalar() or 0,
         "orders_this_month": orders_this_month.scalar() or 0,
         "revenue_xof": revenue_this_month.scalar() or 0,

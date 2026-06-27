@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Package, Receipt, MapPin, QrCode, Clock, CheckCircle, Truck } from "lucide-react";
@@ -184,7 +185,7 @@ export default function OrderDetailPage() {
           {(order.items ?? []).map((item: any) => (
             <div key={item.id} className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid var(--bg-app)" }}>
               {item.image_url ? (
-                <img src={item.image_url} alt={item.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                <Image src={item.image_url} alt={item.name} width={48} height={48} unoptimized className="w-12 h-12 rounded-xl object-cover shrink-0" />
               ) : (
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl" style={{ background: "var(--bg-app)" }}>🛍️</div>
               )}

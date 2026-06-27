@@ -23,6 +23,10 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: ["localhost", "minio", "s3.amazonaws.com"],
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
+    ],
   },
   async rewrites() {
     return [

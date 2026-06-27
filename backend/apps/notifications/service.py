@@ -142,7 +142,7 @@ class NotificationCenterService:
                     NotificationTemplate.company_id == company_id,
                     NotificationTemplate.event_key == event_key,
                     NotificationTemplate.channel == channel,
-                    NotificationTemplate.is_active == True,
+                    NotificationTemplate.is_active,
                 )
             )
             template = result.scalar_one_or_none()
@@ -154,7 +154,7 @@ class NotificationCenterService:
                 NotificationTemplate.company_id.is_(None),
                 NotificationTemplate.event_key == event_key,
                 NotificationTemplate.channel == channel,
-                NotificationTemplate.is_active == True,
+                NotificationTemplate.is_active,
             )
         )
         return result.scalar_one_or_none()

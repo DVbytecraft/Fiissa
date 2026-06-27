@@ -29,12 +29,13 @@ function VerifyEmailContent() {
       toast.error(error.response?.data?.message || "Verification impossible");
     },
   });
+  const { mutate } = mutation;
 
   useEffect(() => {
     if (token) {
-      mutation.mutate();
+      mutate();
     }
-  }, [token]);
+  }, [token, mutate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "var(--bg-app)" }}>

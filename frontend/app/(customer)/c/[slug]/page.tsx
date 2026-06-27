@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Phone, Globe, MapPin, Clock, Star,
@@ -109,7 +110,7 @@ export default function CompanyProfilePage() {
             style={{ background: "var(--bg-app)", border: "2px solid var(--bd)" }}
           >
             {company.logo_url ? (
-              <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+              <Image src={company.logo_url} alt={company.name} fill unoptimized className="object-cover" sizes="80px" />
             ) : (
               <Icon size={32} style={{ color: "var(--tx-muted)" }} />
             )}

@@ -45,7 +45,7 @@ class WebhookService:
         result = await self.db.execute(
             select(WebhookEndpoint).where(
                 WebhookEndpoint.company_id == company_id,
-                WebhookEndpoint.is_active == True,
+                WebhookEndpoint.is_active,
             )
         )
         endpoints = result.scalars().all()

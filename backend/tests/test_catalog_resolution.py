@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from apps.catalog.models import CatalogSource, Product
+from apps.catalog.models import CatalogSource
 from apps.integrations.models import ApiCallLog, ApiCredential, ApiIntegration, ExternalProductCache
 from core.secrets import encrypt_secret
 

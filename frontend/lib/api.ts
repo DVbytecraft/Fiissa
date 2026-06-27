@@ -141,6 +141,19 @@ export const superadminApi = {
     api.post("/superadmin/plans", data),
   activateCompany: (companyId: string) =>
     api.post(`/superadmin/companies/${companyId}/activate`),
+  createCompanyWithOwner: (data: {
+    company_name: string;
+    company_type: string;
+    country?: string;
+    currency?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    owner_email: string;
+    owner_password: string;
+    owner_first_name: string;
+    owner_last_name: string;
+    owner_phone?: string;
+  }) => api.post("/superadmin/companies", data),
 };
 
 export const companiesApi = {
@@ -225,6 +238,9 @@ export const paymentsApi = {
   confirm: (paymentId: string, confirmed: boolean, reason?: string) =>
     api.post(`/payments/${paymentId}/confirm`, { confirmed, reason }),
   getPending: () => api.get("/payments/pending"),
+  initiateGateway: (paymentId: string, customerPhone: string, provider: string = "paygate") =>
+    api.post("/payments/gateway/initiate", { payment_id: paymentId, customer_phone: customerPhone, provider }),
+  getStoreOptions: (storeId: string) => api.get(`/payments/store-options/${storeId}`),
 };
 
 export const receiptsApi = {
@@ -323,6 +339,13 @@ export const loyaltyApi = {
   recomputeScores: () => api.post("/loyalty/intelligence/recompute"),
   getCustomerProfile: (customerId: string) =>
     api.get(`/loyalty/customers/${customerId}/profile`),
+
+  // ── Carte de fidélité virtuelle ──
+  getCardForCompany: (companyId: string) =>
+    api.get(`/loyalty/card-for-company/${companyId}`),
+
+  scanCard: (cardNumber: string) =>
+    api.get(`/loyalty/cards/scan/${cardNumber}`),
 };
 
 export const integrationsApi = {
@@ -334,4 +357,6 @@ export const integrationsApi = {
   testWebhook: (webhookId: string) => api.post(`/integrations/webhooks/${webhookId}/test`),
   getApiKey: () => api.get("/integrations/api-key"),
   regenerateApiKey: () => api.post("/integrations/api-key/regenerate"),
+  getPaymentIntegration: () => api.get("/integrations/payment"),
+  savePaymentIntegration: (data: { provider: string; credentials: Record<string, string> }) => api.post("/integrations/payment", data),
 };

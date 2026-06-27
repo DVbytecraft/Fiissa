@@ -29,7 +29,6 @@ import uuid
 import random
 import string
 from locust import HttpUser, task, between, events
-from locust.runners import MasterRunner, WorkerRunner
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration depuis variables d'environnement

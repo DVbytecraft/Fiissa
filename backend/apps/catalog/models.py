@@ -90,11 +90,26 @@ class Product(Base, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     barcode: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
     sku: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    origin_country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     unit: Mapped[str] = mapped_column(String(50), default="pièce")
+    # Poids et dimensions physiques (informations produit, pas pricing)
+    weight_g: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    volume_ml: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dimensions: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     # Prix en francs CFA entiers — JAMAIS de float
     price_xof: Mapped[int] = mapped_column(Integer, nullable=False)
     compare_price_xof: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tax_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Images : image principale + galerie supplémentaire
     image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    images: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    # Attributs libres (couleur, taille, saveur, etc.) + tags (bio, halal, promo…)
+    attributes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    tags: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    # Quantités min/max par commande
+    min_order_qty: Mapped[int] = mapped_column(Integer, default=1)
+    max_order_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     # Stock

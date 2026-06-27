@@ -13,7 +13,6 @@ async def test_manager_cannot_see_other_company_orders(
 ):
     """Un manager ne peut voir que les commandes de sa propre entreprise."""
     from apps.companies.models import Company, Subscription
-    from apps.stores.models import Store
     from apps.users.models import User, UserCompanyRole
     from core.security import hash_password
 

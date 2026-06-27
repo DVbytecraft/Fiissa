@@ -7,8 +7,6 @@ Tests du cycle de vie des abonnements :
 """
 import pytest
 from datetime import datetime, timezone, timedelta
-from uuid import uuid4
-from httpx import AsyncClient
 
 
 @pytest.mark.asyncio

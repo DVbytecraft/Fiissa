@@ -11,8 +11,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, ForeignKey, Integer, String, Text, func,
-    Enum as SAEnum, UniqueConstraint, Index,
+    DateTime, ForeignKey, Integer, String, Text, Enum as SAEnum, UniqueConstraint, Index,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,10 +21,11 @@ from core.state_machine import PAYMENT_STATUS_VALUES
 
 PAYMENT_OPERATORS = (
     "orange_money", "wave", "mtn_momo", "moov_money",
-    "free_money", "fedapay", "cash", "other",
+    "free_money", "tmoney", "flooz", "fedapay", 
+    "cash", "manual", "other",
 )
 
-PAYMENT_METHODS = ("mobile_money", "card", "cash", "gateway")
+PAYMENT_METHODS = ("mobile_money", "card", "cash", "gateway", "manual")
 
 class Payment(Base, TimestampMixin):
     __tablename__ = "payments"
@@ -86,6 +86,14 @@ class Payment(Base, TimestampMixin):
     )
     rejected_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Remboursement
+    refunded_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    refunded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    refund_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    refund_amount_xof: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Réponse API passerelle (V2)
     gateway_response: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

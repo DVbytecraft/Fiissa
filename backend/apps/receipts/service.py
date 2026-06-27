@@ -4,20 +4,18 @@ Un reçu est IMMUABLE après génération.
 Le numéro de reçu est généré via une séquence atomique par entreprise.
 """
 
+import asyncio
 import html as html_module
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
-
-logger = logging.getLogger(__name__)
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from apps.notifications.service import AuditService, NotificationCenterService
-from apps.orders.models import Order, OrderItem
+from apps.orders.models import Order
 from apps.payments.models import Payment
 from apps.receipts.models import Receipt
 from apps.stores.models import Store
@@ -25,6 +23,9 @@ from apps.users.models import User
 from core.config import settings
 from core.exceptions import NotFoundError, PDFGenerationError
 from core.security import generate_verification_code
+from core.storage import StorageService
+
+logger = logging.getLogger(__name__)
 
 
 class ReceiptService:
@@ -313,48 +314,16 @@ class ReceiptService:
     ) -> str:
         """Génère le PDF avec WeasyPrint et le stocke."""
         try:
-            from weasyprint import HTML, CSS
+            from weasyprint import HTML
 
-            pdf_bytes = HTML(string=html_content).write_pdf()
+            loop = asyncio.get_running_loop()
+            pdf_bytes = await loop.run_in_executor(
+                None, lambda: HTML(string=html_content).write_pdf()
+            )
 
-            # Stocker le PDF
-            storage_key = f"receipts/{company_id}/{receipt_id}.pdf"
-
-            if settings.STORAGE_BACKEND in ("minio", "s3"):
-                url = await self._upload_to_s3(pdf_bytes, storage_key)
-            else:
-                url = await self._save_local(pdf_bytes, storage_key)
-
-            return url
+            return await StorageService.upload_receipt_pdf(company_id, receipt_id, pdf_bytes)
         except Exception as e:
             raise PDFGenerationError() from e
-
-    async def _upload_to_s3(self, pdf_bytes: bytes, key: str) -> str:
-        """Upload vers MinIO/S3."""
-        import aioboto3
-        session = aioboto3.Session()
-        async with session.client(
-            "s3",
-            endpoint_url=f"{'https' if settings.MINIO_USE_SSL else 'http'}://{settings.MINIO_ENDPOINT}",
-            aws_access_key_id=settings.MINIO_ACCESS_KEY,
-            aws_secret_access_key=settings.MINIO_SECRET_KEY,
-        ) as s3:
-            await s3.put_object(
-                Bucket=settings.MINIO_BUCKET_RECEIPTS,
-                Key=key,
-                Body=pdf_bytes,
-                ContentType="application/pdf",
-            )
-        return f"{settings.API_URL}/receipts/download/{key}"
-
-    async def _save_local(self, pdf_bytes: bytes, key: str) -> str:
-        """Sauvegarde locale (dev)."""
-        import os
-        path = f"/app/media/{key}"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb") as f:
-            f.write(pdf_bytes)
-        return f"{settings.API_URL}/media/{key}"
 
     async def _log(self, action: str, **kwargs) -> None:
         await AuditService(self.db).log(action=action, **kwargs)

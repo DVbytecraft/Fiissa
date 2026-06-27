@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -53,9 +54,12 @@ function ProductRow({
       {/* Miniature */}
       <div className="flex-shrink-0">
         {product.image_url ? (
-          <img
+          <Image
             src={product.image_url}
             alt={product.name}
+            width={60}
+            height={60}
+            unoptimized
             className="w-[60px] h-[60px] rounded-xl object-cover"
           />
         ) : (
@@ -194,18 +198,17 @@ export default function StorePage() {
         .then((r) => r.data),
     enabled: !!storeId && !!store,
   });
-  const allProducts: Product[] = Array.isArray(productsData)
-    ? productsData
-    : productsData?.items ?? [];
-
   /* ── Filtrage recherche ── */
   const products = useMemo(() => {
+    const allProducts: Product[] = Array.isArray(productsData)
+      ? productsData
+      : productsData?.items ?? [];
     if (!search.trim()) return allProducts;
     const q = search.toLowerCase();
     return allProducts.filter(
       (p) => p.name.toLowerCase().includes(q) || p.barcode?.includes(q)
     );
-  }, [allProducts, search]);
+  }, [productsData, search]);
 
   /* ── Quantité dans le panier ── */
   const getQty = useCallback(
@@ -323,7 +326,7 @@ export default function StorePage() {
       {!storeLoading && store && (
         <div className="relative h-48 w-full overflow-hidden">
           {store.cover_image_url ? (
-            <img src={store.cover_image_url} alt={store.name} className="h-full w-full object-cover" />
+            <Image src={store.cover_image_url} alt={store.name} fill unoptimized className="object-cover" sizes="100vw" />
           ) : (
             <div
               className="h-full w-full flex items-center justify-center"
@@ -336,9 +339,12 @@ export default function StorePage() {
 
           {/* Logo */}
           {store.logo_url && (
-            <img
+            <Image
               src={store.logo_url}
               alt="Logo"
+              width={56}
+              height={56}
+              unoptimized
               className="absolute top-4 right-4 w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-xl"
             />
           )}

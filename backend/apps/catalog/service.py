@@ -143,11 +143,20 @@ class CatalogResolutionService:
                         "is_available": product.is_available,
                     }
                     product.name = normalized["name"]
+                    product.description = normalized.get("description")
+                    product.brand = normalized.get("brand")
+                    product.origin_country = normalized.get("origin_country")
                     product.price_xof = normalized["price_xof"]
+                    product.compare_price_xof = normalized.get("compare_price_xof")
+                    product.tax_rate = normalized.get("tax_rate")
                     product.stock_quantity = normalized["stock_quantity"]
                     product.category_id = category.id if category else None
                     product.unit = normalized["unit"]
+                    product.weight_g = normalized.get("weight_g")
+                    product.volume_ml = normalized.get("volume_ml")
                     product.is_available = normalized["is_available"]
+                    product.tags = normalized.get("tags") or []
+                    product.attributes = normalized.get("attributes") or {}
                     product.store_id = store_id
                     product.source_type = "csv_import"
                     if normalized.get("sku"):
@@ -169,13 +178,22 @@ class CatalogResolutionService:
                         store_id=store_id,
                         category_id=category.id if category else None,
                         name=normalized["name"],
+                        description=normalized.get("description"),
+                        brand=normalized.get("brand"),
+                        origin_country=normalized.get("origin_country"),
                         barcode=normalized["barcode"],
                         sku=normalized.get("sku"),
                         unit=normalized["unit"],
+                        weight_g=normalized.get("weight_g"),
+                        volume_ml=normalized.get("volume_ml"),
                         price_xof=normalized["price_xof"],
+                        compare_price_xof=normalized.get("compare_price_xof"),
+                        tax_rate=normalized.get("tax_rate"),
                         stock_quantity=normalized["stock_quantity"],
                         track_stock=True,
                         is_available=normalized["is_available"],
+                        tags=normalized.get("tags") or [],
+                        attributes=normalized.get("attributes") or {},
                         source_type="csv_import",
                     )
                     self.db.add(product)
@@ -335,6 +353,229 @@ class CatalogResolutionService:
 
         return source
 
+    async def sync_products_from_api(
+        self,
+        company_id: UUID,
+        products: list[dict],
+        replace_all: bool = False,
+    ) -> dict:
+        """
+        Synchronise des produits poussés par le système externe du marchand via sa clé API Fiissa.
+        source_type = "external_sync". Si replace_all=True, supprime les produits non inclus dans le batch.
+        """
+        from sqlalchemy import update as sa_update
+
+        created = updated = errors = 0
+
+        if replace_all:
+            await self.db.execute(
+                sa_update(Product)
+                .where(
+                    Product.company_id == company_id,
+                    Product.source_type == "external_sync",
+                    Product.is_deleted.is_(False),
+                )
+                .values(is_deleted=True)
+            )
+
+        for item in products:
+            try:
+                barcode = str(item.get("barcode", "")).strip()
+                name = str(item.get("name", "")).strip()
+                if not barcode or not name:
+                    errors += 1
+                    continue
+                price_xof = item.get("price_xof")
+                if price_xof is None:
+                    errors += 1
+                    continue
+
+                result = await self.db.execute(
+                    select(Product).where(
+                        Product.company_id == company_id,
+                        Product.barcode == barcode,
+                        Product.is_deleted.is_(False),
+                    )
+                )
+                product = result.scalar_one_or_none()
+
+                category = None
+                if item.get("category"):
+                    category = await self._get_or_create_category(company_id, None, item["category"])
+
+                stock_qty = item.get("stock_quantity")
+
+                if product:
+                    product.name = name
+                    product.price_xof = int(price_xof)
+                    product.compare_price_xof = item.get("compare_price_xof")
+                    product.weight_g = item.get("weight_g")
+                    product.volume_ml = item.get("volume_ml")
+                    product.image_url = item.get("image_url")
+                    product.images = item.get("images") or []
+                    product.description = item.get("description")
+                    product.brand = item.get("brand")
+                    product.unit = item.get("unit") or "pièce"
+                    product.stock_quantity = int(stock_qty) if stock_qty is not None else product.stock_quantity
+                    product.track_stock = stock_qty is not None
+                    product.is_available = item.get("is_available", True)
+                    product.attributes = item.get("attributes") or {}
+                    product.tags = item.get("tags") or []
+                    if item.get("sku"):
+                        product.sku = item["sku"]
+                    if category:
+                        product.category_id = category.id
+                    product.source_type = "external_sync"
+                    product.is_deleted = False
+                    updated += 1
+                else:
+                    product = Product(
+                        company_id=company_id,
+                        name=name,
+                        barcode=barcode,
+                        sku=item.get("sku"),
+                        price_xof=int(price_xof),
+                        compare_price_xof=item.get("compare_price_xof"),
+                        weight_g=item.get("weight_g"),
+                        volume_ml=item.get("volume_ml"),
+                        image_url=item.get("image_url"),
+                        images=item.get("images") or [],
+                        description=item.get("description"),
+                        brand=item.get("brand"),
+                        unit=item.get("unit") or "pièce",
+                        stock_quantity=int(stock_qty) if stock_qty is not None else 0,
+                        track_stock=stock_qty is not None,
+                        is_available=item.get("is_available", True),
+                        attributes=item.get("attributes") or {},
+                        tags=item.get("tags") or [],
+                        category_id=category.id if category else None,
+                        source_type="external_sync",
+                    )
+                    self.db.add(product)
+                    await self.db.flush()
+                    created += 1
+            except Exception:
+                errors += 1
+
+        return {"created": created, "updated": updated, "errors": errors, "total": created + updated + errors}
+
+    async def list_products_via_api_key(
+        self,
+        company_id: UUID,
+        search: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> dict:
+        """
+        Liste les produits via clé API Fiissa.
+        - Mode external_api/hybrid : Fiissa appelle l'ERP du marchand en temps réel et retourne sa réponse.
+        - Mode internal/csv_import/external_sync : retourne les produits stockés dans Fiissa.
+        """
+        from sqlalchemy import func as sa_func, or_ as sa_or
+
+        source = await self._get_catalog_source(company_id, None)
+
+        if source.mode in ("external_api", "hybrid"):
+            return await self._list_external_products_live(company_id, search, page, page_size)
+
+        query = select(Product).where(
+            Product.company_id == company_id,
+            Product.is_available,
+            Product.is_deleted.is_(False),
+        )
+        if search:
+            query = query.where(
+                sa_or(Product.name.ilike(f"%{search}%"), Product.barcode == search)
+            )
+
+        count_result = await self.db.execute(select(sa_func.count()).select_from(query.subquery()))
+        total = count_result.scalar() or 0
+
+        result = await self.db.execute(
+            query.order_by(Product.name.asc()).offset((page - 1) * page_size).limit(page_size)
+        )
+        products = result.scalars().all()
+
+        return {
+            "items": [self._serialize_product(p, source=p.source_type) for p in products],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    async def _list_external_products_live(
+        self,
+        company_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> dict:
+        """Appelle l'API ERP du marchand pour lister ses produits en temps réel."""
+        result = await self.db.execute(
+            select(ApiIntegration).where(
+                ApiIntegration.company_id == company_id,
+                ApiIntegration.integration_type == "catalog",
+                ApiIntegration.is_active,
+            )
+        )
+        integration = result.scalar_one_or_none()
+        if not integration:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
+        headers = dict(integration.request_headers or {})
+        credentials = (
+            await self.db.execute(
+                select(ApiCredential).where(
+                    ApiCredential.integration_id == integration.id,
+                    ApiCredential.is_active,
+                )
+            )
+        ).scalars().all()
+        for cred in credentials:
+            decrypted = decrypt_secret(cred.encrypted_secret)
+            if cred.credential_type == "api_key":
+                headers[cred.key_name or "X-API-Key"] = decrypted
+            elif cred.credential_type == "bearer":
+                headers[cred.key_name or "Authorization"] = f"Bearer {decrypted}"
+
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if search:
+            params["search"] = search
+
+        try:
+            async with httpx.AsyncClient(timeout=integration.timeout_seconds) as client:
+                response = await client.get(integration.endpoint_url, params=params, headers=headers)
+
+            if response.status_code >= 400:
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
+            raw = self._safe_json(response)
+            mapping = integration.response_mapping or {}
+
+            items_raw: Any = raw
+            if isinstance(raw, dict):
+                for key in ("items", "data", "products", "results"):
+                    if key in raw and isinstance(raw[key], list):
+                        items_raw = raw[key]
+                        break
+
+            if not isinstance(items_raw, list):
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
+            items = []
+            for item in items_raw:
+                try:
+                    normalized = self._normalize_external_payload(item, mapping)
+                    items.append(normalized)
+                except Exception:
+                    pass
+
+            total = raw.get("total", len(items)) if isinstance(raw, dict) else len(items)
+            return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+        except httpx.RequestError:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
     async def _upsert_credential(
         self, integration_id: UUID, credential_type: str, key_name: str, raw_secret: str
     ) -> ApiCredential:
@@ -394,7 +635,7 @@ class CatalogResolutionService:
             select(Product).where(
                 Product.company_id == company_id,
                 Product.barcode == barcode,
-                Product.is_deleted == False,
+                Product.is_deleted.is_(False),
             )
         )
         product = result.scalar_one_or_none()
@@ -411,7 +652,7 @@ class CatalogResolutionService:
             select(Product).where(
                 Product.company_id == company_id,
                 Product.barcode == barcode,
-                Product.is_deleted == False,
+                Product.is_deleted.is_(False),
                 Product.source_type == "csv_import",
             )
         )
@@ -433,7 +674,7 @@ class CatalogResolutionService:
             select(ApiIntegration).where(
                 ApiIntegration.company_id == company_id,
                 ApiIntegration.integration_type == "catalog",
-                ApiIntegration.is_active == True,
+                ApiIntegration.is_active,
             )
         )
         integration = result.scalar_one_or_none()
@@ -446,7 +687,7 @@ class CatalogResolutionService:
             await self.db.execute(
                 select(ApiCredential).where(
                     ApiCredential.integration_id == integration.id,
-                    ApiCredential.is_active == True,
+                    ApiCredential.is_active,
                 )
             )
         ).scalars().all()
@@ -534,12 +775,23 @@ class CatalogResolutionService:
         normalized = {
             "id": read(mapping.get("id"), read("id")),
             "name": read(mapping.get("name"), read("name")),
+            "description": read(mapping.get("description"), read("description")),
+            "brand": read(mapping.get("brand"), read("brand")),
+            "origin_country": read(mapping.get("origin_country"), read("origin_country")),
+            "barcode": read(mapping.get("barcode"), read("barcode")),
+            "sku": read(mapping.get("sku"), read("sku")),
+            "unit": read(mapping.get("unit"), read("unit", "pièce")),
+            "weight_g": read(mapping.get("weight_g"), read("weight_g")),
+            "volume_ml": read(mapping.get("volume_ml"), read("volume_ml")),
             "price_xof": read(mapping.get("price_xof"), read("price_xof")),
+            "compare_price_xof": read(mapping.get("compare_price_xof"), read("compare_price_xof")),
+            "tax_rate": read(mapping.get("tax_rate"), read("tax_rate")),
+            "image_url": read(mapping.get("image_url"), read("image_url")),
+            "images": read(mapping.get("images"), read("images", [])),
+            "attributes": read(mapping.get("attributes"), read("attributes", {})),
+            "tags": read(mapping.get("tags"), read("tags", [])),
             "stock_available": read(mapping.get("stock_available"), read("stock_quantity")),
             "is_available": read(mapping.get("is_available"), read("is_available", True)),
-            "image_url": read(mapping.get("image_url"), read("image_url")),
-            "unit": read(mapping.get("unit"), read("unit", "piece")),
-            "barcode": read(mapping.get("barcode"), read("barcode")),
             "source": "external_api",
         }
         if not normalized["name"]:
@@ -561,7 +813,7 @@ class CatalogResolutionService:
         result = await self.db.execute(
             select(Product).where(
                 Product.company_id == company_id,
-                Product.is_deleted == False,
+                Product.is_deleted.is_(False),
                 or_(*conditions),
             )
         )
@@ -583,15 +835,47 @@ class CatalogResolutionService:
         except Exception as exc:
             raise BadRequestError("stock_quantity invalide", code="invalid_import_row") from exc
         is_available = str(row.get("is_available", "true")).strip().lower() in {"1", "true", "yes", "oui"}
+
+        def _opt_int(key: str) -> Optional[int]:
+            v = row.get(key)
+            if v in (None, ""):
+                return None
+            try:
+                return int(v)
+            except (ValueError, TypeError):
+                return None
+
+        import json as _json
+
+        def _opt_json(key: str, default: Any) -> Any:
+            v = row.get(key)
+            if not v:
+                return default
+            if isinstance(v, (list, dict)):
+                return v
+            try:
+                return _json.loads(v)
+            except Exception:
+                return default
+
         return {
             "barcode": barcode,
             "name": name,
+            "description": (row.get("description") or "").strip() or None,
+            "brand": (row.get("brand") or "").strip() or None,
+            "origin_country": (row.get("origin_country") or "").strip() or None,
             "price_xof": price_xof,
+            "compare_price_xof": _opt_int("compare_price_xof"),
+            "tax_rate": _opt_int("tax_rate"),
             "stock_quantity": stock_quantity,
             "category": (row.get("category") or "Sans categorie").strip(),
-            "unit": (row.get("unit") or "piece").strip(),
+            "unit": (row.get("unit") or "pièce").strip(),
+            "weight_g": _opt_int("weight_g"),
+            "volume_ml": _opt_int("volume_ml"),
             "is_available": is_available,
             "sku": (row.get("sku") or "").strip() or None,
+            "tags": _opt_json("tags", []),
+            "attributes": _opt_json("attributes", {}),
         }
 
     async def _get_or_create_category(
@@ -705,11 +989,26 @@ class CatalogResolutionService:
         return {
             "id": str(product.id),
             "name": product.name,
-            "price_xof": product.price_xof,
+            "description": product.description,
+            "brand": product.brand,
+            "origin_country": product.origin_country,
+            "barcode": product.barcode,
+            "sku": product.sku,
             "unit": product.unit,
+            "weight_g": product.weight_g,
+            "volume_ml": product.volume_ml,
+            "dimensions": product.dimensions,
+            "price_xof": product.price_xof,
+            "compare_price_xof": product.compare_price_xof,
+            "tax_rate": product.tax_rate,
             "image_url": product.image_url,
+            "images": product.images or [],
+            "attributes": product.attributes or {},
+            "tags": product.tags or [],
+            "min_order_qty": product.min_order_qty,
+            "max_order_qty": product.max_order_qty,
             "is_available": product.is_available,
             "stock_available": product.stock_available if product.track_stock else None,
-            "barcode": product.barcode,
+            "track_stock": product.track_stock,
             "source": source,
         }

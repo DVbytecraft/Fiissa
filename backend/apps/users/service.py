@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.users.models import User
-from core.exceptions import BadRequestError, ConflictError, NotFoundError
+from core.exceptions import ConflictError, NotFoundError
 
 # Champs autorisés pour la mise à jour du profil via self-service
 _UPDATABLE_FIELDS = {"first_name", "last_name", "avatar_url", "preferred_language", "marketing_opt_in"}

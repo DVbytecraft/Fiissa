@@ -56,6 +56,9 @@ class Company(Base, TimestampMixin):
     subscription: Mapped[Optional["Subscription"]] = relationship(
         back_populates="company", uselist=False, cascade="all, delete-orphan"
     )
+    setting: Mapped[Optional["CompanySetting"]] = relationship(
+        back_populates="company", uselist=False, cascade="all, delete-orphan"
+    )
     commissions: Mapped[list["Commission"]] = relationship(
         back_populates="company", cascade="all, delete-orphan"
     )
@@ -205,11 +208,19 @@ class CompanySetting(Base):
         default="pickup",
     )
     vat_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"))
+    loyalty_validation_mode: Mapped[str] = mapped_column(
+        SAEnum("auto", "manual", name="loyalty_validation_mode_enum"),
+        default="auto",
+        nullable=False,
+        server_default="auto",
+    )
     extra: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    company: Mapped["Company"] = relationship(back_populates="setting")
 
 
 class FeatureFlag(Base):

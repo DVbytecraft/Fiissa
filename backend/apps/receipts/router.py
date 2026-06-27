@@ -44,7 +44,7 @@ async def _get_receipt_with_access(
         select(UserCompanyRole).where(
             UserCompanyRole.user_id == current_user.id,
             UserCompanyRole.company_id == receipt.company_id,
-            UserCompanyRole.is_active == True,
+            UserCompanyRole.is_active,
         )
     )
     role = role_result.scalar_one_or_none()
@@ -78,6 +78,19 @@ async def verify_receipt_public(
 ):
     service = ReceiptService(db)
     return await service.verify_receipt(verification_code)
+
+
+@router.get("/download/{object_key:path}", include_in_schema=False)
+async def download_receipt_pdf(
+    object_key: str,
+):
+    from core.storage import StorageError, StorageService
+
+    try:
+        content, content_type = await StorageService.get_object(object_key, bucket_type="receipt")
+    except StorageError:
+        raise NotFoundError("Reçu PDF")
+    return Response(content=content, media_type=content_type)
 
 
 @router.get("/merchant")
@@ -119,14 +132,27 @@ async def get_my_receipts(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from apps.stores.models import Store
     result = await db.execute(
         select(Receipt)
-        .options(selectinload(Receipt.order), selectinload(Receipt.store))
+        .options(
+            selectinload(Receipt.order),
+            selectinload(Receipt.store).selectinload(Store.company),
+        )
         .where(Receipt.customer_id == current_user.id)
         .order_by(Receipt.issued_at.desc())
     )
     receipts = result.scalars().all()
-    return [_serialize_receipt(receipt) for receipt in receipts]
+    out = []
+    for r in receipts:
+        item = _serialize_receipt(r)
+        item["company_id"] = str(r.company_id)
+        c = r.store.company if r.store else None
+        item["company_name"] = c.name if c else None
+        item["company_slug"] = c.slug if c else None
+        item["company_logo_url"] = c.logo_url if c else None
+        out.append(item)
+    return out
 
 
 @router.get("/order/{order_id}")

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowRight, MapPin, Search, ShoppingBag } from "lucide-react";
@@ -58,7 +59,7 @@ function StoreCard({ store }: { store: any }) {
         {/* Hero image */}
         <div className="relative h-44 w-full overflow-hidden">
           {store.cover_image_url ? (
-            <img src={store.cover_image_url} alt={store.name} className="h-full w-full object-cover" />
+            <Image src={store.cover_image_url} alt={store.name} fill unoptimized className="object-cover" sizes="100vw" />
           ) : (
             <div
               className="h-full w-full flex items-center justify-center"
@@ -72,9 +73,12 @@ function StoreCard({ store }: { store: any }) {
 
           {/* Logo */}
           {store.logo_url && (
-            <img
+            <Image
               src={store.logo_url}
               alt="Logo"
+              width={48}
+              height={48}
+              unoptimized
               className="absolute top-3 right-3 w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-lg"
             />
           )}

@@ -10,7 +10,9 @@ from httpx import AsyncClient
 def test_otp_uses_secrets_module():
     """OTP ne doit plus utiliser random.choices (non-cryptographique)."""
     import core.security as sec_module
-    import ast, inspect, textwrap
+    import ast
+    import inspect
+    import textwrap
     source = inspect.getsource(sec_module)
     tree = ast.parse(textwrap.dedent(source))
     for node in ast.walk(tree):
@@ -194,6 +196,44 @@ async def test_invite_staff_does_not_expose_temp_password(client: AsyncClient, d
     assert response.status_code == 200
     body = response.json()
     assert "temp_password" not in body, "temp_password ne doit pas être exposé dans la réponse API"
+    assert "password" not in body
+
+
+@pytest.mark.asyncio
+async def test_companies_staff_invite_uses_valid_user_password_field(client: AsyncClient, db, company, staff_headers):
+    """La route /companies/staff/invite doit créer le user sans erreur ORM et sans exposer le mot de passe."""
+    from apps.users.models import User, UserCompanyRole
+    from core.security import hash_password as _hp
+
+    owner = User(
+        email="owner_companies_invite@test.com",
+        password_hash=_hp("Owner1234!"),
+        first_name="Owner",
+        last_name="Companies",
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(owner)
+    await db.flush()
+    db.add(UserCompanyRole(user_id=owner.id, company_id=company.id, role="company_owner"))
+    await db.commit()
+    await db.refresh(owner, attribute_names=["company_roles"])
+
+    headers = staff_headers(owner, company.id, role="company_owner")
+    response = await client.post(
+        "/api/v1/companies/staff/invite",
+        json={
+            "email": "companies_staff@test.com",
+            "first_name": "Companies",
+            "last_name": "Staff",
+            "role": "preparer",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["is_new_user"] is True
+    assert "temp_password" not in body
     assert "password" not in body
 
 

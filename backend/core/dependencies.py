@@ -2,12 +2,15 @@
 FastAPI dependencies for authentication, RBAC, and tenant resolution.
 """
 
+import hashlib
+import secrets
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 from uuid import UUID
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jose import ExpiredSignatureError, JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +26,40 @@ from core.exceptions import (
 from core.permissions import Role, has_permission
 from core.security import decode_access_token
 
+
+def generate_merchant_api_key() -> tuple[str, str, str]:
+    """Génère une clé API Fiissa pour un marchand. Retourne (clé_complète, hash, aperçu_masqué)."""
+    raw = secrets.token_hex(24)
+    full_key = f"fsk_live_{raw}"
+    key_hash = hashlib.sha256(full_key.encode()).hexdigest()
+    masked = f"fsk_live_{raw[:8]}{'•' * 24}{raw[-4:]}"
+    return full_key, key_hash, masked
+
+
+async def require_merchant_api_key(
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(HTTPBearer(auto_error=False))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> UUID:
+    """Dépendance FastAPI — authentifie via clé API Fiissa (Bearer fsk_live_xxx). Retourne company_id."""
+    from apps.integrations.models import MerchantApiKey
+
+    if not credentials or not credentials.credentials.startswith("fsk_live_"):
+        raise AuthenticationError("Clé API Fiissa manquante ou invalide")
+
+    key_hash = hashlib.sha256(credentials.credentials.encode()).hexdigest()
+    result = await db.execute(
+        select(MerchantApiKey).where(
+            MerchantApiKey.key_hash == key_hash,
+            MerchantApiKey.is_active,
+        )
+    )
+    api_key_record = result.scalar_one_or_none()
+    if not api_key_record:
+        raise AuthenticationError("Clé API invalide ou révoquée")
+
+    api_key_record.last_used_at = datetime.now(timezone.utc)
+    return api_key_record.company_id
+
 security_scheme = HTTPBearer(auto_error=False)
 
 
@@ -32,7 +69,7 @@ async def _get_active_roles(user_id: UUID, db: AsyncSession):
     result = await db.execute(
         select(UserCompanyRole).where(
             UserCompanyRole.user_id == user_id,
-            UserCompanyRole.is_active == True,
+            UserCompanyRole.is_active,
         )
     )
     return result.scalars().all()
@@ -81,9 +118,9 @@ async def get_current_user(
 
     try:
         payload = decode_access_token(credentials.credentials)
-    except JWTError as exc:
-        if "expired" in str(exc).lower():
-            raise TokenExpired()
+    except ExpiredSignatureError:
+        raise TokenExpired()
+    except JWTError:
         raise AuthenticationError("Token invalide")
 
     user_id = payload.get("sub")
@@ -91,7 +128,7 @@ async def get_current_user(
         raise AuthenticationError("Token malforme")
 
     result = await db.execute(
-        select(User).where(User.id == UUID(user_id), User.is_active == True)
+        select(User).where(User.id == UUID(user_id), User.is_active)
     )
     user = result.scalar_one_or_none()
     if not user:

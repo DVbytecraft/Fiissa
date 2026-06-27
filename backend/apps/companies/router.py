@@ -5,8 +5,6 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-
-logger = logging.getLogger(__name__)
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +34,7 @@ except ModuleNotFoundError:
         return value.strip("-")
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/companies", tags=["Entreprises"])
 
 
@@ -67,6 +66,7 @@ class CompanySettingsUpdate(BaseModel):
     payment_mode: Optional[str] = None
     delivery_mode: Optional[str] = None
     vat_rate: Optional[Decimal] = None
+    loyalty_validation_mode: Optional[str] = None
     extra: Optional[dict] = None
 
 
@@ -183,6 +183,7 @@ async def get_my_company_settings(
         "payment_mode": settings.payment_mode,
         "delivery_mode": settings.delivery_mode,
         "vat_rate": float(settings.vat_rate),
+        "loyalty_validation_mode": settings.loyalty_validation_mode,
         "extra": settings.extra,
     }
 
@@ -323,7 +324,7 @@ async def list_plans(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Plan).where(Plan.is_active == True).order_by(Plan.amount_xof.asc()))
+    result = await db.execute(select(Plan).where(Plan.is_active).order_by(Plan.amount_xof.asc()))
     plans = result.scalars().all()
     return {
         "items": [
@@ -672,7 +673,7 @@ async def get_company_public_profile(
     Accessible sans authentification.
     """
     result = await db.execute(
-        select(Company).where(Company.slug == slug, Company.is_active == True)
+        select(Company).where(Company.slug == slug, Company.is_active)
     )
     company = result.scalar_one_or_none()
     if not company:
@@ -682,11 +683,11 @@ async def get_company_public_profile(
     loyalty_result = await db.execute(
         select(LoyaltyProgram).where(
             LoyaltyProgram.company_id == company.id,
-            LoyaltyProgram.is_active == True,
-            LoyaltyProgram.loyalty_enabled == True,
+            LoyaltyProgram.is_active,
+            LoyaltyProgram.loyalty_enabled,
         )
     )
-    loyalty = loyalty_result.scalar_one_or_none()
+    loyalty = loyalty_result.scalars().first()
 
     return {
         "id": str(company.id),
@@ -748,6 +749,190 @@ async def update_company_public_profile(
         "contact_phone": company.contact_phone,
         "message": "Profil public mis à jour",
     }
+
+
+# ------------------------------------------------------------------ #
+#  GESTION DU PERSONNEL (staff)                                        #
+# ------------------------------------------------------------------ #
+
+STAFF_ROLES = ("store_manager", "accountant", "preparer", "security_agent", "support_agent")
+
+
+class StaffInviteRequest(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str = ""
+    role: str
+    store_id: Optional[UUID] = None
+
+
+@router.get("/staff", summary="Lister le personnel")
+async def list_staff(
+    ctx: TenantContext = Depends(get_tenant_context),
+    current_user=Depends(require_permission("staff.read")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retourne tous les membres du personnel de l'entreprise (actifs et inactifs)."""
+    from apps.users.models import User, UserCompanyRole
+
+    result = await db.execute(
+        select(UserCompanyRole, User)
+        .join(User, User.id == UserCompanyRole.user_id)
+        .where(
+            UserCompanyRole.company_id == ctx.company_id,
+            UserCompanyRole.role.in_(STAFF_ROLES),
+        )
+        .order_by(UserCompanyRole.created_at.desc())
+    )
+    rows = result.all()
+    return {
+        "items": [
+            {
+                "user_id": str(role.user_id),
+                "role_id": str(role.id),
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "phone": user.phone,
+                "role": role.role,
+                "store_id": str(role.store_id) if role.store_id else None,
+                "is_active": role.is_active,
+                "joined_at": role.created_at.isoformat() if role.created_at else None,
+            }
+            for role, user in rows
+        ]
+    }
+
+
+@router.post("/staff/invite", summary="Inviter un membre du personnel")
+async def invite_staff_member(
+    data: StaffInviteRequest,
+    ctx: TenantContext = Depends(get_tenant_context),
+    current_user=Depends(require_permission("staff.invite")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Invite un nouveau membre du personnel.
+    - Si l'email n'existe pas : crée le compte avec mot de passe temporaire et envoie l'email.
+    - Si l'email existe déjà : assigne directement le rôle.
+    """
+    from apps.users.models import User, UserCompanyRole
+    from apps.companies.models import Company
+
+    if data.role not in STAFF_ROLES:
+        raise BadRequestError(
+            f"Rôle invalide. Rôles autorisés : {', '.join(STAFF_ROLES)}"
+        )
+
+    # Récupérer la société pour le nom dans l'email
+    company_result = await db.execute(select(Company).where(Company.id == ctx.company_id))
+    company = company_result.scalar_one_or_none()
+    company_name = company.name if company else "Fiissa"
+
+    # Chercher l'utilisateur par email
+    user_result = await db.execute(select(User).where(User.email == data.email.lower()))
+    user = user_result.scalar_one_or_none()
+
+    temp_password = None
+    is_new_user = False
+
+    if not user:
+        # Créer le compte avec mot de passe temporaire
+        import secrets
+        temp_password = secrets.token_urlsafe(10)
+        user = User(
+            email=data.email.lower(),
+            first_name=data.first_name,
+            last_name=data.last_name,
+            password_hash=hash_password(temp_password),
+            is_active=True,
+            is_verified=False,
+        )
+        db.add(user)
+        await db.flush()
+        is_new_user = True
+    else:
+        # Vérifier si le rôle existe déjà
+        existing_role_result = await db.execute(
+            select(UserCompanyRole).where(
+                UserCompanyRole.user_id == user.id,
+                UserCompanyRole.company_id == ctx.company_id,
+                UserCompanyRole.role == data.role,
+            )
+        )
+        existing_role = existing_role_result.scalar_one_or_none()
+        if existing_role:
+            if existing_role.is_active:
+                raise BadRequestError(f"{data.email} a déjà le rôle '{data.role}' dans cette entreprise.")
+            # Réactiver le rôle désactivé
+            existing_role.is_active = True
+            if data.store_id:
+                existing_role.store_id = data.store_id
+            await db.commit()
+            return {
+                "message": f"Accès de {data.email} réactivé avec le rôle '{data.role}'.",
+                "user_id": str(user.id),
+                "is_new_user": False,
+            }
+
+    # Créer le rôle
+    role = UserCompanyRole(
+        user_id=user.id,
+        company_id=ctx.company_id,
+        store_id=data.store_id,
+        role=data.role,
+        is_active=True,
+    )
+    db.add(role)
+    await db.commit()
+
+    # Envoyer l'email d'invitation si nouveau compte
+    if is_new_user and temp_password:
+        try:
+            from apps.notifications.service import EmailService
+            await EmailService.send_staff_invitation(
+                email=data.email,
+                first_name=data.first_name or data.email.split("@")[0],
+                temp_password=temp_password,
+                company_name=company_name,
+            )
+        except Exception as exc:
+            logger.error("Staff invitation email failed for %s: %s", data.email, exc)
+
+    return {
+        "message": f"{'Invitation envoyée' if is_new_user else 'Rôle attribué'} à {data.email}.",
+        "user_id": str(user.id),
+        "is_new_user": is_new_user,
+    }
+
+
+@router.delete("/staff/{user_id}", summary="Retirer un membre du personnel")
+async def remove_staff_member(
+    user_id: UUID,
+    ctx: TenantContext = Depends(get_tenant_context),
+    current_user=Depends(require_permission("staff.remove")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Désactive tous les rôles de personnel de l'utilisateur dans cette entreprise."""
+    from apps.users.models import UserCompanyRole
+
+    result = await db.execute(
+        select(UserCompanyRole).where(
+            UserCompanyRole.user_id == user_id,
+            UserCompanyRole.company_id == ctx.company_id,
+            UserCompanyRole.role.in_(STAFF_ROLES),
+            UserCompanyRole.is_active,
+        )
+    )
+    roles = result.scalars().all()
+    if not roles:
+        raise NotFoundError("Membre du personnel introuvable ou déjà retiré")
+
+    for role in roles:
+        role.is_active = False
+
+    await db.commit()
+    return {"message": "Accès révoqué", "user_id": str(user_id)}
 
 
 # ------------------------------------------------------------------ #

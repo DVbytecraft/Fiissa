@@ -6,11 +6,9 @@ Service Auth - logique d'authentification.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
-
-logger = logging.getLogger(__name__)
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +25,7 @@ from apps.auth.schemas import (
 from apps.notifications.models import AuditLog
 from apps.users.models import OTPCode, RefreshToken, User, UserCompanyRole
 from core.config import settings
-from core.exceptions import ConflictError, InvalidCredentials, InvalidOTP, TokenExpired
+from core.exceptions import AccountLocked, ConflictError, InvalidCredentials, InvalidOTP, TokenExpired
 from core.security import (
     create_access_token,
     create_refresh_token,
@@ -38,6 +36,8 @@ from core.security import (
     refresh_token_expires_at,
     verify_password,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -97,28 +97,26 @@ class AuthService:
     ) -> OTPSentResponse:
         """Envoie un OTP email au client après validation du mot de passe."""
         result = await self.db.execute(
-            select(User).where(User.email == str(data.email), User.is_active == True)
+            select(User).where(User.email == str(data.email), User.is_active)
         )
         user = result.scalar_one_or_none()
         if not user or not user.password_hash:
             raise InvalidCredentials()
 
+        self._check_account_lockout(user)
+
         if not verify_password(data.password, user.password_hash):
-            await self._log(
-                action="auth.login_failed",
-                user_id=user.id,
-                ip_address=ip_address,
-                new_data={"email": user.email, "reason": "wrong_password"},
-            )
+            await self._handle_failed_login(user, ip_address, {"email": user.email, "reason": "wrong_password"})
             raise InvalidCredentials()
 
+        user.failed_login_attempts = 0
         return await self._send_otp(user, ip_address)
 
     async def _send_otp(self, user: User, ip_address: str) -> OTPSentResponse:
         """Génère et envoie un OTP email."""
         await self.db.execute(
             update(OTPCode)
-            .where(OTPCode.user_id == user.id, OTPCode.is_used == False)
+            .where(OTPCode.user_id == user.id, OTPCode.is_used.is_(False))
             .values(is_used=True)
         )
 
@@ -164,8 +162,8 @@ class AuthService:
             .where(
                 OTPCode.email == str(data.email),
                 OTPCode.code == data.code,
-                OTPCode.is_used == False,
-                User.is_active == True,
+                OTPCode.is_used.is_(False),
+                User.is_active,
             )
             .order_by(OTPCode.created_at.desc())
         )
@@ -199,22 +197,20 @@ class AuthService:
     ) -> TokenResponse:
         """Authentification staff par email/mot de passe."""
         result = await self.db.execute(
-            select(User).where(User.email == data.email, User.is_active == True)
+            select(User).where(User.email == data.email, User.is_active)
         )
         user = result.scalar_one_or_none()
 
         if not user or not user.password_hash:
             raise InvalidCredentials()
 
+        self._check_account_lockout(user)
+
         if not verify_password(data.password, user.password_hash):
-            await self._log(
-                action="auth.login_failed",
-                user_id=user.id if user else None,
-                ip_address=ip_address,
-                new_data={"email": data.email, "reason": "wrong_password"},
-            )
+            await self._handle_failed_login(user, ip_address, {"email": data.email, "reason": "wrong_password"})
             raise InvalidCredentials()
 
+        user.failed_login_attempts = 0
         user.last_login_at = datetime.now(timezone.utc)
 
         await self._log(
@@ -238,7 +234,7 @@ class AuthService:
             .where(
                 RefreshToken.token_hash == token_hash,
                 RefreshToken.revoked_at == None,  # noqa: E711
-                User.is_active == True,
+                User.is_active,
             )
         )
         token_record = result.scalar_one_or_none()
@@ -281,7 +277,7 @@ class AuthService:
         result = await self.db.execute(
             select(UserCompanyRole).where(
                 UserCompanyRole.user_id == user.id,
-                UserCompanyRole.is_active == True,
+                UserCompanyRole.is_active,
             )
         )
         roles = result.scalars().all()
@@ -339,6 +335,25 @@ class AuthService:
                 return staff_roles[0]
             return None
         return roles[0]
+
+    def _check_account_lockout(self, user: User) -> None:
+        """Vérifie si le compte est temporairement verrouillé."""
+        if user.locked_until and user.locked_until > datetime.now(timezone.utc):
+            raise AccountLocked()
+
+    async def _handle_failed_login(self, user: User, ip_address: str, log_data: dict) -> None:
+        """Incrémente le compteur d'échecs et verrouille si nécessaire."""
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= settings.LOGIN_MAX_ATTEMPTS:
+            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
+            log_data["locked_until"] = user.locked_until.isoformat()
+
+        await self._log(
+            action="auth.login_failed",
+            user_id=user.id,
+            ip_address=ip_address,
+            new_data=log_data,
+        )
 
     async def _log(
         self,

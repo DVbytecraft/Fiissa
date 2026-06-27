@@ -23,6 +23,7 @@ WEBHOOK_EVENT_TYPES = (
     "order.ready",
     "order.cancelled",
     "payment.confirmed",
+    "payment.refunded",
     "receipt.generated",
 )
 DELIVERY_STATUS = ("pending", "success", "failed")
@@ -40,7 +41,7 @@ class ApiIntegration(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(150), nullable=False, default="catalog_api")
     integration_type: Mapped[str] = mapped_column(
-        SAEnum("catalog", "erp", "pos", "stock", name="integration_type_enum"),
+        SAEnum("catalog", "erp", "pos", "stock", "payment", name="integration_type_enum"),
         default="catalog",
     )
     endpoint_url: Mapped[str] = mapped_column(Text, nullable=False)
@@ -136,6 +137,25 @@ class ExternalProductCache(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     integration: Mapped["ApiIntegration"] = relationship(back_populates="product_cache_entries")
+
+
+class MerchantApiKey(Base):
+    """Clé API Fiissa générée pour chaque marchand. Permet aux systèmes externes (ERP/POS) d'appeler l'API Fiissa."""
+    __tablename__ = "merchant_api_keys"
+    __table_args__ = (
+        Index("ix_merchant_api_keys_key_hash", "key_hash", unique=True),
+        Index("ix_merchant_api_keys_company_id", "company_id", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    masked_preview: Mapped[str] = mapped_column(String(60), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class WebhookEndpoint(Base, TimestampMixin):

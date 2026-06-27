@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Clock, QrCode, Tag, TicketX } from "lucide-react";
@@ -32,7 +33,7 @@ function CouponQrModal({ code, onClose }: { code: string; onClose: () => void })
         <p className="font-bold text-base mb-1" style={{ color: "var(--tx-head)" }}>Code coupon</p>
         <p className="font-mono text-xl font-semibold mb-4 tracking-widest" style={{ color: "var(--p-500)" }}>{code}</p>
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt="QR coupon" className="w-44 h-44 rounded-2xl" style={{ border: "4px solid white", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }} />
+          <Image src={qrDataUrl} alt="QR coupon" width={176} height={176} unoptimized className="w-44 h-44 rounded-2xl" style={{ border: "4px solid white", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }} />
         ) : (
           <div className="w-44 h-44 rounded-2xl skeleton" />
         )}

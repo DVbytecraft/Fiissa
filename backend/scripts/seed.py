@@ -8,9 +8,7 @@ Lance : cd backend && python -m scripts.seed
 import asyncio
 import os
 import sys
-import uuid
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 
 # Charger l'environnement avant les imports métier
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://fiissa:fiissa@localhost:5432/fiissa")
@@ -24,7 +22,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from core.config import settings
-from core.database import Base
 from core.security import hash_password, generate_pickup_code, generate_verification_code
 
 
@@ -286,7 +283,7 @@ async def run_seed():
             result = await db.execute(
                 select(Product).where(
                     Product.company_id == company.id,
-                    Product.is_available == True,
+                    Product.is_available,
                 ).limit(3)
             )
             demo_products = result.scalars().all()
@@ -396,8 +393,8 @@ async def run_seed():
         print(f"  Magasin       : {store.name}")
         print(f"  Produits      : {len(PRODUCTS_SEED)} référence(s)")
         print(f"  Client        : {customer.phone}")
-        print(f"  Propriétaire  : owner@fiissa-demo.com / Demo1234!")
-        print(f"  Manager       : manager@fiissa-demo.com / Demo1234!")
+        print("  Propriétaire  : owner@fiissa-demo.com / Demo1234!")
+        print("  Manager       : manager@fiissa-demo.com / Demo1234!")
         print(f"  Commande      : {order.order_number} ({order.status})")
         print(f"  Paiement      : {payment.payment_number} ({payment.status})")
         print("━" * 60)

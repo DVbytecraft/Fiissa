@@ -10,11 +10,10 @@ from sqlalchemy import (
     Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint,
     func, text, Enum as SAEnum,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base, TimestampMixin
-from core.permissions import Role
 
 
 class User(Base, TimestampMixin):
@@ -49,6 +48,13 @@ class User(Base, TimestampMixin):
     )
     marketing_opt_in: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false")
+    )
+    # Sécurité — Verrouillage de compte après N tentatives échouées
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0")
+    )
+    locked_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # Relations

@@ -38,6 +38,14 @@ class InvalidOTP(SmartCheckoutException):
     def __init__(self):
         super().__init__(status.HTTP_401_UNAUTHORIZED, "Code incorrect ou expiré", "invalid_otp")
 
+class AccountLocked(SmartCheckoutException):
+    def __init__(self, retry_after_minutes: int = 15):
+        super().__init__(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"Compte verrouillé pour sécurité. Réessayez dans {retry_after_minutes} minutes.",
+            "account_locked"
+        )
+
 
 # 403
 class PermissionDenied(SmartCheckoutException):

@@ -34,7 +34,7 @@ async def get_my_notifications(
         .limit(50)
     )
     if unread_only:
-        stmt = stmt.where(Notification.is_read == False)
+        stmt = stmt.where(Notification.is_read.is_(False))
     result = await db.execute(stmt)
     notifs = result.scalars().all()
     return [
@@ -60,7 +60,7 @@ async def get_notification_summary(
     result = await db.execute(
         select(Notification).where(
             Notification.user_id == current_user.id,
-            Notification.is_read == False,
+            Notification.is_read.is_(False),
         )
     )
     notifications = result.scalars().all()
@@ -88,7 +88,7 @@ async def mark_all_read(
 ):
     await db.execute(
         update(Notification)
-        .where(Notification.user_id == current_user.id, Notification.is_read == False)
+        .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
         .values(is_read=True)
     )
     return {"message": "Toutes les notifications marquees comme lues"}

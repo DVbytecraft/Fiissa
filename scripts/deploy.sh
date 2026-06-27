@@ -1,7 +1,6 @@
 #!/bin/bash
-# deploy.sh — Déploiement Fiissa en production avec rollback automatique
-# Usage : ./scripts/deploy.sh [--no-migrate] [--no-backup]
-# Prérequis : docker, docker compose, .env.prod
+# deploy.sh - Production deployment with health validation and rollback.
+# Usage: ./scripts/deploy.sh [--no-migrate] [--no-backup]
 
 set -euo pipefail
 
@@ -12,172 +11,168 @@ BACKUP_DIR="$PROJECT_DIR/scripts/backup"
 LOG_FILE="$PROJECT_DIR/deploy.log"
 ROLLBACK_MARKER="$PROJECT_DIR/.rollback_available"
 
-log()  { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
-error(){ log "ERREUR : $*"; }
-ok()   { log "✓ $*"; }
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+error() { log "ERROR: $*"; }
+ok() { log "[ok] $*"; }
+compose() { docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
 
-# ── Nettoyage en cas d'échec ───────────────────────────────────────────────────
-_rollback() {
+health_status() {
+    local service="$1"
+    local container_id
+    container_id="$(compose ps -q "$service" 2>/dev/null || true)"
+    if [ -z "$container_id" ]; then
+        echo "missing"
+        return 1
+    fi
+    docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id"
+}
+
+rollback_on_failure() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        log ""
-        log "════════════════════════════════════════"
-        log "⚠  DÉPLOIEMENT ÉCHOUÉ (exit $exit_code) — ROLLBACK AUTOMATIQUE"
-        log "════════════════════════════════════════"
+    if [ "$exit_code" -eq 0 ]; then
+        return
+    fi
 
-        if [ -f "$ROLLBACK_MARKER" ]; then
-            local prev_image
-            prev_image=$(cat "$ROLLBACK_MARKER")
-            log "Image précédente : $prev_image"
+    log ""
+    log "========================================"
+    log "DEPLOYMENT FAILED (exit $exit_code)"
+    log "========================================"
 
-            log "Rollback : restauration de l'image précédente..."
-            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-                down --remove-orphans 2>/dev/null || true
+    if [ -f "$ROLLBACK_MARKER" ]; then
+        local previous_image
+        previous_image="$(cat "$ROLLBACK_MARKER")"
+        log "Previous image: $previous_image"
 
-            # Retag l'ancienne image et redémarrer
-            docker tag "$prev_image" "fiissa_backend:latest" 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-                up -d --no-deps backend worker beat 2>/dev/null || true
+        compose down --remove-orphans 2>/dev/null || true
+        docker tag "$previous_image" "fiissa_backend:latest" 2>/dev/null || true
+        compose up -d --remove-orphans postgres redis minio backend worker beat frontend nginx 2>/dev/null || true
 
-            # Health check post-rollback
-            local retries=0
-            while [ $retries -lt 6 ]; do
-                if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
-                    ok "Rollback réussi — API opérationnelle"
-                    rm -f "$ROLLBACK_MARKER"
-                    break
-                fi
-                retries=$((retries + 1))
-                sleep 5
-            done
-
-            if [ $retries -eq 6 ]; then
-                error "Rollback échoué — intervention manuelle requise"
-                log "Commandes de récupération :"
-                log "  docker compose -f $COMPOSE_FILE logs --tail=100 backend"
-                log "  docker compose -f $COMPOSE_FILE restart backend"
+        local retries=0
+        while [ "$retries" -lt 6 ]; do
+            if compose exec -T backend curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+                ok "Automatic rollback succeeded"
+                rm -f "$ROLLBACK_MARKER"
+                break
             fi
-        else
-            log "Pas d'image précédente disponible — premier déploiement ?"
-            log "Vérifiez manuellement : docker compose -f $COMPOSE_FILE logs backend"
+            retries=$((retries + 1))
+            sleep 5
+        done
+
+        if [ "$retries" -eq 6 ]; then
+            error "Automatic rollback failed. Manual intervention required."
+            log "Inspect with: docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs --tail=100 backend"
         fi
+    else
+        log "No rollback image available. This may be the first deployment."
     fi
 }
 
-trap _rollback EXIT
+trap rollback_on_failure EXIT
 
-log "════════════════════════════════════════"
-log "=== Déploiement Fiissa ==="
-log "Git : $(git -C "$PROJECT_DIR" rev-parse --short HEAD 2>/dev/null || echo 'non-git')"
-log "════════════════════════════════════════"
+log "========================================"
+log "=== Fiissa Deployment ==="
+log "Git: $(git -C "$PROJECT_DIR" rev-parse --short HEAD 2>/dev/null || echo 'non-git')"
+log "========================================"
 
-# ── Vérifications préalables ───────────────────────────────────────────────────
 if [ ! -f "$ENV_FILE" ]; then
-    error "$ENV_FILE introuvable. Copier .env.prod.example vers .env.prod."
+    error "$ENV_FILE not found. Copy .env.prod.example to .env.prod first."
     exit 1
 fi
 
-if ! command -v docker &>/dev/null; then
-    error "Docker non installé."
+if ! command -v docker >/dev/null 2>&1; then
+    error "Docker is not installed."
     exit 1
 fi
+
+if ! docker compose version >/dev/null 2>&1; then
+    error "Docker Compose plugin is not available."
+    exit 1
+fi
+
+set -a
+source "$ENV_FILE"
+set +a
 
 mkdir -p "$BACKUP_DIR"
 
-# ── Sauvegarder l'image actuelle pour rollback ────────────────────────────────
-CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' \
-    "$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -q backend 2>/dev/null)" \
-    2>/dev/null || echo "")
-
+CURRENT_IMAGE="$(docker inspect --format='{{.Config.Image}}' "$(compose ps -q backend 2>/dev/null)" 2>/dev/null || echo "")"
 if [ -n "$CURRENT_IMAGE" ]; then
     SNAPSHOT_TAG="fiissa_backend:rollback_$(date +%Y%m%d_%H%M%S)"
-    docker tag "$CURRENT_IMAGE" "$SNAPSHOT_TAG" 2>/dev/null && \
-        echo "$SNAPSHOT_TAG" > "$ROLLBACK_MARKER" && \
-        log "Image rollback sauvegardée : $SNAPSHOT_TAG"
+    docker tag "$CURRENT_IMAGE" "$SNAPSHOT_TAG" 2>/dev/null || true
+    echo "$SNAPSHOT_TAG" > "$ROLLBACK_MARKER"
+    log "Rollback image saved: $SNAPSHOT_TAG"
 fi
 
-# ── 1. Sauvegarde DB pré-déploiement ─────────────────────────────────────────
 if [[ "${2:-}" != "--no-backup" ]]; then
-    log "1/7 Sauvegarde pré-déploiement..."
+    log "1/7 Pre-deploy database backup..."
     BACKUP_FILE="$BACKUP_DIR/pre_deploy_$(date +%Y%m%d_%H%M%S).sql.gz"
-    if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps postgres | grep -q "running"; then
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T postgres \
-            pg_dump -U "${POSTGRES_USER:-fiissa}" "${POSTGRES_DB:-fiissa}" \
-            | gzip > "$BACKUP_FILE" && \
-            ok "Backup créé : $(basename "$BACKUP_FILE") ($(du -sh "$BACKUP_FILE" | cut -f1))"
+    if compose ps --status running postgres | grep -q postgres; then
+        compose exec -T postgres pg_dump -U "${POSTGRES_USER:-fiissa}" "${POSTGRES_DB:-fiissa}" | gzip > "$BACKUP_FILE"
+        ok "Backup created: $(basename "$BACKUP_FILE")"
     else
-        log "1/7 DB pas encore démarrée — backup ignoré (premier déploiement ?)"
+        log "Postgres is not running yet, backup skipped."
     fi
 else
-    log "1/7 Backup ignoré (--no-backup)"
+    log "1/7 Backup skipped (--no-backup)"
 fi
 
-# ── 2. Pull nouvelles images ──────────────────────────────────────────────────
-log "2/7 Pull images Docker..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-ok "Images à jour"
+log "2/7 Build Docker images..."
+compose build --pull backend worker beat frontend
+ok "Application images built"
 
-# ── 3. Migrations Alembic ─────────────────────────────────────────────────────
+log "3/7 Start base services..."
+compose up -d --remove-orphans postgres redis minio
+ok "Base services started"
+
 if [[ "${1:-}" != "--no-migrate" ]]; then
-    log "3/7 Migrations Alembic..."
-
-    # Vérifier d'abord que les migrations peuvent s'appliquer (dry-run via check)
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm \
-        -e DATABASE_URL \
-        backend alembic check 2>/dev/null && log "Migrations : déjà à jour" || {
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm \
-            -e DATABASE_URL \
-            backend alembic upgrade head
-        ok "Migrations appliquées"
+    log "4/7 Run database migrations..."
+    compose run --rm -e DATABASE_URL backend alembic check 2>/dev/null && log "Migrations already up to date" || {
+        compose run --rm -e DATABASE_URL backend alembic upgrade head
+        ok "Migrations applied"
     }
 else
-    log "3/7 Migrations ignorées (--no-migrate)"
+    log "4/7 Migrations skipped (--no-migrate)"
 fi
 
-# ── 4. Seed superadmin ────────────────────────────────────────────────────────
-log "4/7 Seed superadmin (si absent)..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm \
-    backend python scripts/seed.py 2>/dev/null && ok "Seed OK" || log "⚠ Seed ignoré (déjà fait ou erreur)"
+log "5/7 Seed superadmin if needed..."
+compose run --rm backend python scripts/seed.py 2>/dev/null && ok "Seed completed" || log "Seed skipped or already applied"
 
-# ── 5. Redémarrage des services ───────────────────────────────────────────────
-log "5/7 Redémarrage services (blue-green rolling)..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d \
-    --no-deps --remove-orphans \
-    backend worker beat
-ok "Services redémarrés"
+log "6/7 Start full application stack..."
+compose up -d --remove-orphans backend worker beat frontend nginx certbot
+ok "Application stack started"
 
-# ── 6. Health check ───────────────────────────────────────────────────────────
-log "6/7 Health check (60s max)..."
+log "7/7 Validate service health..."
 HEALTH_OK=false
-for i in $(seq 1 12); do
-    if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
-        ok "API opérationnelle (tentative $i/12)"
+for i in $(seq 1 18); do
+    if compose exec -T backend curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
         HEALTH_OK=true
+        ok "Backend health endpoint responded (attempt $i/18)"
         break
     fi
-    log "   Attente... ($i/12)"
+    log "Waiting for backend health... ($i/18)"
     sleep 5
 done
 
 if [ "$HEALTH_OK" = false ]; then
-    error "API non disponible après 60s"
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail=50 backend
-    exit 1  # déclenche le trap → rollback automatique
+    error "Backend health endpoint did not become ready within 90s"
+    compose logs --tail=50 backend
+    exit 1
 fi
 
-# ── 7. Nettoyage ──────────────────────────────────────────────────────────────
-log "7/7 Nettoyage images inutilisées..."
+for service in postgres redis minio backend worker beat frontend nginx; do
+    SERVICE_HEALTH="$(health_status "$service" || true)"
+    if [ "$SERVICE_HEALTH" != "healthy" ] && [ "$SERVICE_HEALTH" != "running" ]; then
+        error "Service $service is not healthy: $SERVICE_HEALTH"
+        compose ps
+        exit 1
+    fi
+done
+
+log "Cleanup unused Docker images..."
 docker image prune -f >/dev/null 2>&1 || true
 
-# Tout s'est bien passé : supprimer le marqueur rollback
 rm -f "$ROLLBACK_MARKER"
-ok "Marqueur rollback supprimé (déploiement confirmé)"
+ok "Rollback marker removed"
+log "=== Deployment completed successfully ==="
 
-log ""
-log "════════════════════════════════════════"
-log "=== Déploiement terminé avec succès ==="
-log "Git : $(git -C "$PROJECT_DIR" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-log "════════════════════════════════════════"
-
-# Désactiver le trap (succès)
 trap - EXIT

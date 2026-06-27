@@ -6,8 +6,8 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 # Bake production URLs at build time (Render Docker doesn't pass runtime vars as build args).
-ARG NEXT_PUBLIC_API_URL=https://fiissa-api.onrender.com
-ARG NEXT_PUBLIC_APP_URL=https://fiissa-frontend.onrender.com
+ARG NEXT_PUBLIC_API_URL=https://fiissa.com
+ARG NEXT_PUBLIC_APP_URL=https://fiissa.com
 ARG NEXT_PUBLIC_APP_NAME=Fiissa
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL

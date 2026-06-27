@@ -60,6 +60,32 @@ class Store(Base, TimestampMixin):
         return f"<Store id={self.id} name={self.name} company={self.company_id}>"
 
 
+class DeliveryZone(Base, TimestampMixin):
+    """
+    Zone de livraison d'un magasin avec frais spécifiques.
+    Permet des frais différenciés par quartier ou rayon géographique.
+    """
+    __tablename__ = "delivery_zones"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    store_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("stores.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivery_fee_xof: Mapped[int] = mapped_column(default=0)
+    free_delivery_threshold_xof: Mapped[Optional[int]] = mapped_column(nullable=True)
+    estimated_minutes: Mapped[Optional[int]] = mapped_column(nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 from apps.companies.models import Company  # noqa: E402
 from apps.catalog.models import Category, Product  # noqa: E402
 from apps.orders.models import Order  # noqa: E402

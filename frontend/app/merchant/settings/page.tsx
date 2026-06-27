@@ -113,6 +113,7 @@ export default function MerchantSettingsPage() {
   const [catalogFallback, setCatalogFallback] = useState(true);
   const [openingHours, setOpeningHours] = useState<Record<string, { open: string; close: string }>>(DEFAULT_HOURS);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+  const [loyaltyValidationMode, setLoyaltyValidationMode] = useState<"auto" | "manual">("auto");
 
   const { data: store, isLoading } = useQuery({
     queryKey: ["store-settings"],
@@ -152,6 +153,7 @@ export default function MerchantSettingsPage() {
 
   useEffect(() => {
     if (companySettings?.catalog_mode) setCatalogMode(companySettings.catalog_mode);
+    if (companySettings?.loyalty_validation_mode) setLoyaltyValidationMode(companySettings.loyalty_validation_mode);
   }, [companySettings]);
 
   useEffect(() => {
@@ -202,6 +204,12 @@ export default function MerchantSettingsPage() {
     mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) => companiesApi.upsertMyFeatureFlag({ key, enabled }),
     onSuccess: () => toast.success("Feature flag mise a jour"),
     onError: (error: any) => toast.error(error.response?.data?.detail || error.response?.data?.message || "Erreur feature flag"),
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (payload: object) => companiesApi.updateMySettings(payload),
+    onSuccess: () => toast.success("Parametres fidelite mis a jour"),
+    onError: (error: any) => toast.error(error.response?.data?.detail || error.response?.data?.message || "Erreur parametre"),
   });
 
   const handleSaveStore = () => {
@@ -272,6 +280,11 @@ export default function MerchantSettingsPage() {
     const nextValue = !featureFlags[key];
     setFeatureFlags((current) => ({ ...current, [key]: nextValue }));
     featureFlagMutation.mutate({ key, enabled: nextValue });
+  };
+
+  const handleLoyaltyModeChange = (mode: "auto" | "manual") => {
+    setLoyaltyValidationMode(mode);
+    updateSettingsMutation.mutate({ loyalty_validation_mode: mode });
   };
 
   const tabs = [
@@ -523,19 +536,62 @@ export default function MerchantSettingsPage() {
           )}
 
           {activeTab === "features" && (
-            <SectionCard title="Feature flags entreprise" description="Controle fin des modules exposes par entreprise pour activer ou restreindre chaque capacite.">
-              <div className="space-y-3">
-                {featureFlagItems.map((flag) => (
-                  <FeatureToggle
-                    key={flag.key}
-                    enabled={!!featureFlags[flag.key]}
-                    label={flag.label}
-                    description={flag.desc}
-                    onToggle={() => handleToggleFlag(flag.key)}
-                  />
-                ))}
-              </div>
-            </SectionCard>
+            <>
+              <SectionCard title="Feature flags entreprise" description="Controle fin des modules exposes par entreprise pour activer ou restreindre chaque capacite.">
+                <div className="space-y-3">
+                  {featureFlagItems.map((flag) => (
+                    <FeatureToggle
+                      key={flag.key}
+                      enabled={!!featureFlags[flag.key]}
+                      label={flag.label}
+                      description={flag.desc}
+                      onToggle={() => handleToggleFlag(flag.key)}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+
+              {featureFlags["loyalty"] && (
+                <SectionCard
+                  title="Validation des points fidelite"
+                  description="Choisissez si les points sont credites automatiquement apres confirmation du paiement, ou sur validation manuelle de votre equipe."
+                >
+                  <div className="flex gap-3">
+                    {(
+                      [
+                        { value: "auto" as const, label: "Automatique", desc: "Immediat apres paiement" },
+                        { value: "manual" as const, label: "Manuel", desc: "Validation par votre equipe" },
+                      ] as const
+                    ).map((opt) => {
+                      const selected = loyaltyValidationMode === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleLoyaltyModeChange(opt.value)}
+                          className="flex-1 rounded-2xl p-4 text-left transition-all"
+                          style={{
+                            border: `2px solid ${selected ? "var(--tx-head)" : "var(--bd)"}`,
+                            background: selected ? "var(--n-50)" : "#FFFFFF",
+                          }}
+                        >
+                          <p className="text-sm font-bold" style={{ color: "var(--tx-head)" }}>
+                            {opt.label}
+                          </p>
+                          <p className="text-xs mt-1" style={{ color: "var(--tx-muted)" }}>
+                            {opt.desc}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {updateSettingsMutation.isPending && (
+                    <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
+                      Enregistrement…
+                    </p>
+                  )}
+                </SectionCard>
+              )}
+            </>
           )}
         </div>
       </div>

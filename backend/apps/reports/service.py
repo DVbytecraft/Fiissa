@@ -6,6 +6,7 @@ ReportService - Rapports analytiques multi-tenant.
 - Business intelligence client et fidelite
 """
 
+import asyncio
 import csv
 import io
 from calendar import monthrange
@@ -262,7 +263,7 @@ class ReportService:
         coupons_used = await self.db.scalar(
             select(func.count(LoyaltyCoupon.id)).where(
                 LoyaltyCoupon.company_id == company_id,
-                LoyaltyCoupon.is_used == True,
+                LoyaltyCoupon.is_used,
                 LoyaltyCoupon.used_at.between(start, end),
             )
         ) or 0
@@ -270,7 +271,7 @@ class ReportService:
         rewards_used = await self.db.scalar(
             select(func.count(func.distinct(LoyaltyCoupon.reward_id))).where(
                 LoyaltyCoupon.company_id == company_id,
-                LoyaltyCoupon.is_used == True,
+                LoyaltyCoupon.is_used,
                 LoyaltyCoupon.used_at.between(start, end),
                 LoyaltyCoupon.reward_id.is_not(None),
             )
@@ -534,7 +535,10 @@ class ReportService:
         try:
             from weasyprint import HTML
 
-            return HTML(string=html).write_pdf()
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, lambda: HTML(string=html).write_pdf()
+            )
         except Exception:
             return html.encode("utf-8")
 

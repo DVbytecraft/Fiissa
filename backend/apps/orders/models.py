@@ -94,6 +94,11 @@ class Order(Base, TimestampMixin):
     delivery_fee_xof: Mapped[int] = mapped_column(Integer, default=0)
     total_xof: Mapped[int] = mapped_column(Integer, default=0)
 
+    promotion_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("promotions.id", ondelete="SET NULL"), nullable=True
+    )
+    promotion_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     delivery_address: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     pickup_code: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)

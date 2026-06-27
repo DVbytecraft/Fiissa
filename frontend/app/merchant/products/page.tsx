@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Package, AlertTriangle, Upload, Pencil, Trash2, BarChart2, X } from "lucide-react";
 import { catalogApi } from "@/lib/api";
@@ -277,9 +278,12 @@ function ProductRow({
           className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
         >
           {product.image_url ? (
-            <img
+            <Image
               src={product.image_url}
               alt={product.name}
+              width={48}
+              height={48}
+              unoptimized
               className="w-full h-full object-cover rounded-xl"
             />
           ) : (

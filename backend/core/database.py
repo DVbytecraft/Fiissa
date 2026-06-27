@@ -7,12 +7,11 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import DateTime, func
 from datetime import datetime
-import uuid
 
 from core.config import settings
 
 engine_kwargs = {
-    "echo": settings.DEBUG,
+    "echo": settings.is_development,
     "pool_pre_ping": True,
 }
 if "sqlite" not in settings.DATABASE_URL:
@@ -58,5 +57,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
+    """Crée les tables. À n'utiliser qu'en développement/test. En production, utilisez Alembic."""
+    if settings.is_production:
+        raise RuntimeError("init_db() ne doit pas être appelé en production. Utilisez Alembic pour les migrations.")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

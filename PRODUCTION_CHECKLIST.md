@@ -1,102 +1,116 @@
-# Fiissa — Checklist Production
+# Fiissa - Production Checklist
 
-## Avant premier déploiement
+## Pre-flight
 
-### Secrets et configuration
-- [ ] Générer SECRET_KEY : `openssl rand -hex 32`
-- [ ] Configurer `.env.prod` avec toutes les valeurs (voir `.env.prod.example`)
-- [ ] Vérifier que `.env.prod` n'est pas commité dans git (`.gitignore`)
-- [ ] Configurer `POSTGRES_PASSWORD` fort (min. 32 caractères)
-- [ ] Configurer `REDIS_PASSWORD` fort (min. 32 caractères)
+- [ ] Copy `.env.prod.example` to `.env.prod`
+- [ ] Generate a real `SECRET_KEY` with `openssl rand -hex 32`
+- [ ] Set strong values for `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
+- [ ] Verify `APP_URL`, `API_URL`, `CORS_ORIGINS`, and `ALLOWED_HOSTS`
+- [ ] Set `FEDAPAY_*`, `SMTP_*`, `BREVO_API_KEY`, `SENTRY_DSN`, and SMS provider secrets if those integrations are enabled
+- [ ] Set `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`, and `SUPERADMIN_PHONE`
+- [ ] Confirm DNS for `fiissa.com` and `www.fiissa.com`
+- [ ] Open ports `80` and `443`
+- [ ] Confirm at least 20 GB free disk space for Docker volumes and backups
 
-### Infrastructure
-- [ ] Obtenir certificat SSL (Let's Encrypt via certbot ou certificat commercial)
-- [ ] Placer `fullchain.pem` et `privkey.pem` dans `nginx/ssl/`
-- [ ] Configurer DNS : `fiissa.com` → IP serveur, `www.fiissa.com` → IP serveur
-- [ ] Ouvrir ports 80 et 443 sur le pare-feu serveur
-- [ ] Vérifier espace disque disponible (min. 20 Go recommandés)
-
-### Services tiers
-- [ ] Configurer SMTP Brevo (`BREVO_API_KEY`) et tester envoi d'un email
-- [ ] Configurer Sentry DSN backend (`SENTRY_DSN`) et vérifier un event de test
-- [ ] Configurer Sentry DSN frontend et vérifier un event de test
-- [ ] Configurer Africa's Talking / Twilio (`SMS_PROVIDER` + clés API) et tester un SMS
-- [ ] Configurer FedaPay (`FEDAPAY_API_KEY`) en mode production (`FEDAPAY_SANDBOX=false`)
-- [ ] Créer le bucket MinIO `receipts` et `products` (ou configurer S3)
-
-### Données initiales
-- [ ] Définir `SUPERADMIN_EMAIL` et `SUPERADMIN_PASSWORD` dans `.env.prod`
-- [ ] Lancer migrations : `docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head`
-- [ ] Seed superadmin : `docker compose -f docker-compose.prod.yml run --rm backend python scripts/seed.py`
-
-### Backup
-- [ ] Tester le script backup : `bash scripts/backup.sh`
-- [ ] Tester la restauration depuis un backup : `bash scripts/restore.sh /path/to/backup.sql.gz`
-- [ ] Configurer le cron backup quotidien : `0 2 * * * /opt/fiissa/scripts/backup.sh >> /var/log/fiissa-backup.log 2>&1`
-- [ ] Vérifier rétention 30 jours (automatique dans le script)
-
----
-
-## Déploiement initial
+## First Boot Commands
 
 ```bash
-# Depuis /opt/fiissa sur le serveur
-git clone <repo> /opt/fiissa
+cd /opt/fiissa
 cp .env.prod.example .env.prod
-# Remplir .env.prod
+# edit .env.prod
 
-# Premier démarrage (sans backup car DB vide)
-bash scripts/deploy.sh --no-backup
+docker compose -f docker-compose.prod.yml --env-file .env.prod build --pull backend worker beat frontend
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d postgres redis minio
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend alembic upgrade head
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python scripts/seed.py
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d backend worker beat frontend nginx certbot
 ```
 
-- [ ] `bash scripts/deploy.sh` s'exécute sans erreur
-- [ ] Vérifier `http://fiissa.com` redirige bien vers HTTPS
-- [ ] Vérifier `https://fiissa.com/api/health` → `{"status":"ok","db":"connected","redis":"connected"}`
-- [ ] Tester login superadmin via l'interface
-- [ ] Tester création d'une entreprise et d'une commande client
+## Health Validation
 
----
+- [ ] `docker compose -f docker-compose.prod.yml --env-file .env.prod ps`
+- [ ] `docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend curl -fsS http://localhost:8000/health`
+- [ ] `/health` reports `db=connected`
+- [ ] `/health` reports `redis=connected`
+- [ ] `/health` reports `storage=connected`
+- [ ] `/health` reports `celery=connected`
+- [ ] `postgres`, `redis`, `minio`, `backend`, `worker`, `beat`, `frontend`, and `nginx` are `healthy` or `running`
 
-## Déploiements suivants
+## TLS
+
+- [ ] If using Let's Encrypt, run `bash scripts/init-letsencrypt.sh fiissa.com admin@fiissa.com`
+- [ ] If using pre-issued certificates, place them under `certbot/conf/live/fiissa.com/`
+- [ ] `http://fiissa.com` redirects to HTTPS
+- [ ] `curl -I https://fiissa.com` returns HSTS, `X-Frame-Options`, and `X-Content-Type-Options`
+
+## Storage and Data Safety
+
+- [ ] MinIO health passes: `docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T minio curl -fsS http://localhost:9000/minio/health/live`
+- [ ] Buckets `products` and `receipts` exist after backend startup
+- [ ] Product image upload returns a public API URL, not an internal `minio:9000` URL
+- [ ] Receipt PDF download works through `/api/v1/receipts/download/...`
+- [ ] Backup works: `docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T postgres pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip > scripts/backup/manual_smoke.sql.gz`
+- [ ] Restore drill works: `bash scripts/restore.sh scripts/backup/manual_smoke.sql.gz`
+
+## Live Smoke Test
+
+- [ ] Customer registration and OTP login
+- [ ] Product lookup and cart add
+- [ ] Order creation
+- [ ] Payment creation
+- [ ] Payment proof submission
+- [ ] Receipt generation and PDF download
+- [ ] Outbound webhook delivery
+- [ ] Delayed Celery task execution
+- [ ] Merchant dashboard and pending payments
+
+## External Integrations
+
+- [ ] SMTP/Brevo test email sent and received
+- [ ] SMS provider test sent and received if SMS is enabled
+- [ ] FedaPay or PayGate test transaction confirmed
+- [ ] Sentry test event visible in the target project
+- [ ] MinIO or S3 object upload and download verified with real credentials
+
+## Load and Resilience
+
+- [ ] Run Locust against the live stack:
 
 ```bash
-bash scripts/deploy.sh
+cd backend
+locust -f tests/locustfile.py --host https://fiissa.com --headless -u 100 -r 10 -t 120s --csv reports/load_100users
 ```
 
-- Backup automatique pré-déploiement inclus
-- Migrations Alembic automatiques
-- Rollback automatique si health check échoue
-- Pour rollback manuel : `bash scripts/rollback.sh`
+- [ ] Review p95 latency under 2000 ms
+- [ ] Review error rate under 1%
+- [ ] Review `backend`, `worker`, `beat`, `nginx`, and `redis` logs during the run
 
----
+## Operational Commands
 
-## Monitoring
+```bash
+# full deploy
+bash scripts/deploy.sh
 
-- [ ] Sentry configuré — vérifier réception d'un event de test
-- [ ] Alertes Sentry : error rate > 1%, latence P95 > 2s
-- [ ] Logs Nginx disponibles dans le volume `nginx_logs`
-- [ ] Surveiller l'espace disque des volumes Docker régulièrement
+# first deploy without existing database
+bash scripts/deploy.sh --no-backup
 
----
+# stack status
+docker compose -f docker-compose.prod.yml --env-file .env.prod ps
 
-## Sécurité post-déploiement
+# backend health
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend curl -fsS http://localhost:8000/health
 
-- [ ] Vérifier les headers de sécurité : `curl -I https://fiissa.com`
-  - `Strict-Transport-Security` présent
-  - `X-Frame-Options: DENY` présent
-  - `X-Content-Type-Options: nosniff` présent
-- [ ] Tester le rate limiting sur `/api/v1/auth/login` (max 5 req/min par IP)
-- [ ] Confirmer que MinIO console (port 9001) n'est pas accessible publiquement
-- [ ] Vérifier que `/docs` et `/redoc` FastAPI sont désactivés en production
-- [ ] Confirmer que `DEBUG=false` et `ENVIRONMENT=production` dans `.env.prod`
+# targeted logs
+docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail=100 backend worker beat nginx minio
 
----
+# manual rollback
+bash scripts/rollback.sh
+```
 
-## Références
+## Remaining Honest Blockers Before Real Production Certification
 
-- Script déploiement : `scripts/deploy.sh`
-- Script rollback manuel : `scripts/rollback.sh`
-- Script backup : `scripts/backup.sh`
-- Script restore : `scripts/restore.sh`
-- Config nginx : `nginx/nginx.conf`
-- Docker Compose prod : `docker-compose.prod.yml`
+- [ ] A full live `docker compose -f docker-compose.prod.yml up` has been executed in an environment with Docker daemon access
+- [ ] Real `.env.prod` secrets have been injected and validated
+- [ ] Real SMTP, SMS, payment, Sentry, and object-storage providers have been exercised end-to-end
+- [ ] Backup and restore drills have been executed against a running production-like database
+- [ ] Locust has been run against the running stack and results reviewed

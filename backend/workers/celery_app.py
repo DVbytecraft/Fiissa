@@ -21,7 +21,12 @@ celery_app.conf.update(
     task_routes={
         "workers.tasks.generate_receipt_pdf": {"queue": "pdf"},
         "workers.tasks.notify_*": {"queue": "notifications"},
-        "workers.tasks.generate_monthly_report": {"queue": "reports"},
+        "workers.tasks.deliver_webhook": {"queue": "notifications"},
+        "workers.tasks.generate_monthly_reports": {"queue": "reports"},
+        "workers.tasks.cancel_expired_orders": {"queue": "celery"},
+        "workers.tasks.send_stock_alerts": {"queue": "notifications"},
+        "workers.tasks.check_subscription_expiry": {"queue": "celery"},
+        "workers.tasks.compute_customer_scores": {"queue": "celery"},
     },
     beat_schedule={
         "check-expired-orders": {

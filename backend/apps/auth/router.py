@@ -3,9 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
-
-logger = logging.getLogger(__name__)
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +31,7 @@ from core.exceptions import NotFoundError
 from core.rate_limit import limiter
 from core.security import hash_password
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
 

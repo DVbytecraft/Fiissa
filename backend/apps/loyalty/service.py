@@ -20,13 +20,13 @@ Règles absolues :
 
 import secrets
 import string
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from apps.loyalty.models import (
     CardTemplate,
@@ -322,14 +322,129 @@ class LoyaltyCardService:
         )
         return list(result.scalars().all())
 
-    async def list_own(self, customer_id: UUID) -> list[LoyaltyCard]:
-        """Toutes les cartes du client, toutes entreprises confondues."""
+    async def list_own(self, customer_id: UUID) -> list[dict]:
+        """Toutes les cartes du client, toutes entreprises confondues, avec infos design."""
         result = await self.db.execute(
             select(LoyaltyCard)
-            .where(LoyaltyCard.customer_id == customer_id)
+            .options(
+                selectinload(LoyaltyCard.program),
+                selectinload(LoyaltyCard.tier),
+                selectinload(LoyaltyCard.card_template),
+                selectinload(LoyaltyCard.company),
+            )
+            .where(LoyaltyCard.customer_id == customer_id, LoyaltyCard.status == "active")
             .order_by(LoyaltyCard.issued_at.desc())
         )
-        return list(result.scalars().all())
+        cards = result.scalars().all()
+        
+        enriched_cards = []
+        for card in cards:
+            bg_color = "#1A1A2E"
+            text_color = "#FFFFFF"
+            logo_url = card.company.logo_url if card.company else None
+
+            if card.card_template:
+                bg_color = card.card_template.background_color
+                text_color = card.card_template.text_color
+                if card.card_template.logo_url:
+                    logo_url = card.card_template.logo_url
+
+            enriched_cards.append({
+                "id": card.id,
+                "company_id": card.company_id,
+                "customer_id": card.customer_id,
+                "program_id": card.program_id,
+                "tier_id": card.tier_id,
+                "card_template_id": card.card_template_id,
+                "card_number": card.card_number,
+                "points_balance": card.points_balance,
+                "card_type": card.card_type,
+                "external_issuer": card.external_issuer,
+                "external_ref": card.external_ref,
+                "status": card.status,
+                "issued_at": card.issued_at,
+                "expires_at": card.expires_at,
+                "company_name": card.company.name if card.company else None,
+                "program_name": card.program.name if card.program else None,
+                "tier_name": card.tier.name if card.tier else None,
+                "background_color": bg_color,
+                "text_color": text_color,
+                "logo_url": logo_url,
+            })
+        return enriched_cards
+
+    async def get_card_for_company(self, customer_id: UUID, company_id: UUID) -> Optional[dict]:
+        """
+        Vérifie si le client a une carte de fidélité active chez une entreprise spécifique.
+        Retourne un dictionnaire structuré pour le frontend, ou None si pas de carte.
+        """
+        result = await self.db.execute(
+            select(LoyaltyCard)
+            .options(selectinload(LoyaltyCard.program), selectinload(LoyaltyCard.tier), selectinload(LoyaltyCard.card_template))
+            .where(
+                LoyaltyCard.company_id == company_id,
+                LoyaltyCard.customer_id == customer_id,
+                LoyaltyCard.status == "active",
+            )
+        )
+        card = result.scalar_one_or_none()
+        if not card:
+            return None
+
+        from apps.companies.models import Company
+        company_result = await self.db.execute(select(Company).where(Company.id == company_id))
+        company = company_result.scalar_one_or_none()
+
+        bg_color = "#1A1A2E"
+        text_color = "#FFFFFF"
+        logo_url = company.logo_url if company else None
+
+        if card.card_template:
+            bg_color = card.card_template.background_color
+            text_color = card.card_template.text_color
+            if card.card_template.logo_url:
+                logo_url = card.card_template.logo_url
+
+        return {
+            "card_id": str(card.id),
+            "card_number": card.card_number,
+            "points_balance": card.points_balance,
+            "company_id": str(card.company_id),
+            "company_name": company.name if company else "N/A",
+            "tier_name": card.tier.name if card.tier else None,
+            "program_name": card.program.name if card.program else None,
+            "card_design": {
+                "background_color": bg_color,
+                "text_color": text_color,
+                "logo_url": logo_url,
+            },
+            "is_active": card.status == "active",
+        }
+
+    async def import_by_scan(self, customer_id: UUID, card_number: str) -> LoyaltyCard:
+        """
+        Scanne une carte physique (par numéro) et l'importe dans le compte du client.
+        Règle anti-duplication : Une carte ne peut pas être liée à deux comptes.
+        """
+        result = await self.db.execute(
+            select(LoyaltyCard).where(LoyaltyCard.card_number == card_number)
+        )
+        card = result.scalar_one_or_none()
+
+        if not card:
+            raise NotFoundError("Carte fidélité introuvable")
+
+        if card.customer_id is not None:
+            if card.customer_id == customer_id:
+                return card
+            else:
+                raise ConflictError("Cette carte est déjà liée à un autre compte", "card_already_linked")
+
+        card.customer_id = customer_id
+        card.status = "active"
+        await self.db.flush()
+        await self.db.refresh(card)
+        return card
 
 
 # ── LoyaltyTransactionService ──────────────────────────────────────────────────
@@ -363,8 +478,20 @@ class LoyaltyTransactionService:
         """
         Calcule et crédite les points en fonction de amount_xof et du taux du programme.
         Crédit minimum : 1 point.
+        Valide que la commande appartient à la même entreprise si order_id est fourni.
         """
         card = await self._get_active_card(company_id, card_id)
+
+        if order_id:
+            order_result = await self.db.execute(
+                select(Order).where(
+                    Order.id == order_id,
+                    Order.company_id == company_id,
+                    Order.customer_id == card.customer_id,
+                )
+            )
+            if not order_result.scalar_one_or_none():
+                raise BadRequestError("Commande invalide ou n'appartenant pas à ce client/entreprise", "invalid_order")
 
         points_to_earn = 0
         if card.program_id:
@@ -493,7 +620,7 @@ class LoyaltyRewardService:
             .where(
                 LoyaltyReward.company_id == company_id,
                 LoyaltyReward.program_id == program_id,
-                LoyaltyReward.is_active == True,
+                LoyaltyReward.is_active,
             )
             .order_by(LoyaltyReward.points_cost)
         )
@@ -575,6 +702,24 @@ class LoyaltyCouponService:
         now = datetime.now(timezone.utc)
         if coupon.expires_at and coupon.expires_at < now:
             raise BadRequestError("Ce coupon a expiré", "coupon_expired")
+
+        order_result = await self.db.execute(
+            select(Order).where(
+                Order.id == order_id,
+                Order.company_id == company_id,
+            )
+        )
+        order = order_result.scalar_one_or_none()
+        if order:
+            if coupon.customer_id and order.customer_id != coupon.customer_id:
+                raise BadRequestError("Ce coupon ne vous appartient pas", "coupon_not_owned")
+
+            if coupon.min_order_xof and order.total_xof < coupon.min_order_xof:
+                raise BadRequestError(
+                    f"Montant minimum requis : {coupon.min_order_xof} XOF pour ce coupon",
+                    "coupon_min_order_not_met"
+                )
+
         coupon.is_used = True
         coupon.used_at = now
         coupon.order_id = order_id

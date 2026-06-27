@@ -18,10 +18,14 @@ class Settings(BaseSettings):
     API_URL: str = "http://localhost:8000"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     SECRET_KEY: str
     CORS_ORIGINS: str = "http://localhost:3000"
     ALLOWED_HOSTS: str = "localhost,127.0.0.1,testserver,test"
+
+    # Sécurité — Verrouillage de compte
+    LOGIN_MAX_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
 
     # PostgreSQL
     DATABASE_URL: str
@@ -56,8 +60,8 @@ class Settings(BaseSettings):
     # Stockage
     STORAGE_BACKEND: Literal["minio", "s3", "local"] = "local"
     MINIO_ENDPOINT: str = "localhost:9000"
-    MINIO_ACCESS_KEY: str = "minioadmin"
-    MINIO_SECRET_KEY: str = "minioadmin123"
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET_RECEIPTS: str = "receipts"
     MINIO_BUCKET_PRODUCTS: str = "products"
     MINIO_USE_SSL: bool = False
@@ -73,6 +77,7 @@ class Settings(BaseSettings):
     FEDAPAY_PUBLIC_KEY: str = ""
     FEDAPAY_WEBHOOK_SECRET: str = ""
     FEDAPAY_SANDBOX: bool = True
+    PAYGATE_WEBHOOK_SECRET: str = ""
 
     # Email
     EMAIL_PROVIDER: Literal["smtp", "brevo_api", "mock"] = "smtp"
@@ -138,6 +143,33 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @property
+    def is_development(self) -> bool:
+        return self.ENVIRONMENT == "development"
+
+    @field_validator("DEBUG", mode="after")
+    @classmethod
+    def force_debug_off_in_prod(cls, v: bool, info) -> bool:
+        if info.data.get("ENVIRONMENT") == "production" and v:
+            return False
+        return v
+
+    @field_validator("MINIO_ACCESS_KEY", mode="after")
+    @classmethod
+    def validate_minio_credentials(cls, v: str, info) -> str:
+        if info.data.get("STORAGE_BACKEND") == "minio" and info.data.get("ENVIRONMENT") == "production":
+            if not v or v == "minioadmin":
+                raise ValueError("MINIO_ACCESS_KEY must be set and not default in production")
+        return v
+
+    @field_validator("MINIO_SECRET_KEY", mode="after")
+    @classmethod
+    def validate_minio_secret(cls, v: str, info) -> str:
+        if info.data.get("STORAGE_BACKEND") == "minio" and info.data.get("ENVIRONMENT") == "production":
+            if not v or v == "minioadmin123":
+                raise ValueError("MINIO_SECRET_KEY must be set and not default in production")
+        return v
 
     @property
     def database_url_sync(self) -> str:

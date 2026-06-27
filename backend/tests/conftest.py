@@ -13,7 +13,6 @@ import asyncio
 import os
 import sys
 from types import SimpleNamespace
-from typing import Awaitable, Callable
 
 import pytest
 import pytest_asyncio

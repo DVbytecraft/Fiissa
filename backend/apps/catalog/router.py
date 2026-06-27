@@ -1,19 +1,74 @@
+import io
+import json
 import os
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from apps.catalog.models import Category, CatalogImportError, CatalogImportJob, Product, StockMovement
 from apps.catalog.service import CatalogResolutionService
 from apps.notifications.models import AuditLog
 from apps.stores.models import Store
 from core.database import get_db
-from core.dependencies import TenantContext, get_tenant_context, require_permission
+from core.dependencies import TenantContext, get_tenant_context, require_merchant_api_key, require_permission
 from core.exceptions import BadRequestError, NotFoundError
+
+
+def _parse_xlsx_to_rows(content: bytes) -> list[dict]:
+    """Convertit un fichier XLSX en liste de dicts (même structure que l'import CSV)."""
+    try:
+        import openpyxl
+    except ModuleNotFoundError as exc:
+        raise BadRequestError(
+            "Le support Excel n'est pas disponible sur cette instance. Installez openpyxl ou utilisez CSV/JSON."
+        ) from exc
+
+    wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        raise BadRequestError("Fichier Excel vide.")
+    headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+    result = []
+    for row in rows[1:]:
+        if all(v is None for v in row):
+            continue
+        result.append({headers[i]: (str(v).strip() if v is not None else "") for i, v in enumerate(row)})
+    return result
+
+
+def _parse_json_to_rows(content: bytes) -> list[dict]:
+    """Convertit un fichier JSON [{...}, ...] ou {products: [...]} en liste de dicts."""
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        raise BadRequestError(f"JSON invalide : {e}")
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("products", "items", "data", "catalogue"):
+            if key in data and isinstance(data[key], list):
+                return data[key]
+    raise BadRequestError("Format JSON attendu : liste de produits ou objet avec clé 'products'.")
+
+
+def _rows_to_csv_bytes(rows: list[dict]) -> bytes:
+    """Convertit une liste de dicts en CSV bytes pour réutiliser import_csv_catalog."""
+    import csv as _csv
+    if not rows:
+        raise BadRequestError("Fichier vide — aucune ligne de données trouvée.")
+    headers = list(rows[0].keys())
+    buf = io.StringIO()
+    writer = _csv.DictWriter(buf, fieldnames=headers, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return buf.getvalue().encode("utf-8")
 from core.pagination import PaginatedResponse
 
 
@@ -50,6 +105,31 @@ class StockAdjustRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class ProductSyncItem(BaseModel):
+    barcode: str
+    name: str
+    price_xof: int
+    weight_g: Optional[int] = None
+    volume_ml: Optional[int] = None
+    image_url: Optional[str] = None
+    images: Optional[list[str]] = []
+    description: Optional[str] = None
+    brand: Optional[str] = None
+    unit: str = "pièce"
+    stock_quantity: Optional[int] = None
+    is_available: bool = True
+    attributes: Optional[dict] = {}
+    tags: Optional[list[str]] = []
+    compare_price_xof: Optional[int] = None
+    sku: Optional[str] = None
+    category: Optional[str] = None
+
+
+class ProductSyncPayload(BaseModel):
+    products: list[ProductSyncItem]
+    replace_all: bool = False
+
+
 router = APIRouter(prefix="/catalog", tags=["Catalogue"])
 
 
@@ -63,7 +143,7 @@ async def get_categories(
         select(Category)
         .where(
             Category.company_id == company_id,
-            Category.is_active == True,
+            Category.is_active,
         )
         .order_by(Category.position.asc(), Category.name.asc())
     )
@@ -86,8 +166,8 @@ async def get_products(
 ):
     query = select(Product).where(
         Product.company_id == company_id,
-        Product.is_available == True,
-        Product.is_deleted == False,
+        Product.is_available,
+        Product.is_deleted.is_(False),
     )
 
     if category_id:
@@ -151,6 +231,19 @@ async def find_by_barcode(
     return await service.resolve_product_by_barcode(company_id, store_id, barcode)
 
 
+@router.get("/products/image/{object_key:path}", include_in_schema=False)
+async def get_product_image(
+    object_key: str,
+):
+    from core.storage import StorageService, StorageError
+
+    try:
+        content, content_type = await StorageService.get_object(object_key, bucket_type="product")
+    except StorageError:
+        raise NotFoundError("Image produit")
+    return Response(content=content, media_type=content_type)
+
+
 @router.post("/products")
 async def create_product(
     data: ProductCreate,
@@ -189,7 +282,7 @@ async def update_product(
         select(Product).where(
             Product.id == product_id,
             Product.company_id == ctx.company_id,
-            Product.is_deleted == False,
+            Product.is_deleted.is_(False),
         )
     )
     product = result.scalar_one_or_none()
@@ -251,6 +344,51 @@ async def adjust_stock(
     return {"product_id": str(product.id), "new_stock": product.stock_quantity}
 
 
+@router.post("/products/sync", summary="Synchroniser le catalogue depuis l'ERP (clé API Fiissa)")
+async def sync_products_from_erp(
+    data: ProductSyncPayload,
+    company_id: UUID = Depends(require_merchant_api_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Appelé par le système externe du marchand (ERP/POS) pour pousser son catalogue dans Fiissa.
+    Authentification : Authorization: Bearer fsk_live_xxx
+    Tous les champs produit sont supportés : nom, prix, poids, images, stock, attributs, tags...
+    Si replace_all=true, les produits external_sync absents du batch sont supprimés.
+    """
+    service = CatalogResolutionService(db)
+    result = await service.sync_products_from_api(
+        company_id=company_id,
+        products=[item.model_dump() for item in data.products],
+        replace_all=data.replace_all,
+    )
+    await db.commit()
+    return result
+
+
+@router.get("/products/live", summary="Catalogue produits en temps réel (clé API Fiissa)")
+async def list_products_live(
+    search: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, le=200),
+    company_id: UUID = Depends(require_merchant_api_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Appelé par le système externe du marchand pour interroger le catalogue.
+    - Mode external_api / hybrid : Fiissa appelle l'ERP du marchand en temps réel et retourne sa réponse (pas de stockage).
+    - Mode internal / csv_import / external_sync : Fiissa retourne les produits de sa base.
+    Authentification : Authorization: Bearer fsk_live_xxx
+    """
+    service = CatalogResolutionService(db)
+    return await service.list_products_via_api_key(
+        company_id=company_id,
+        search=search,
+        page=page,
+        page_size=page_size,
+    )
+
+
 @router.get("/categories", summary="Categories marchand")
 async def get_merchant_categories(
     ctx: TenantContext = Depends(get_tenant_context),
@@ -284,7 +422,7 @@ async def get_merchant_products(
 ):
     query = select(Product).where(
         Product.company_id == ctx.company_id,
-        Product.is_deleted == False,
+        Product.is_deleted.is_(False),
     )
     if search:
         query = query.where(
@@ -293,10 +431,10 @@ async def get_merchant_products(
     if category_id:
         query = query.where(Product.category_id == category_id)
     if stock_filter == "out":
-        query = query.where(Product.track_stock == True, Product.stock_quantity == 0)
+        query = query.where(Product.track_stock, Product.stock_quantity == 0)
     elif stock_filter == "low":
         query = query.where(
-            Product.track_stock == True,
+            Product.track_stock,
             Product.stock_alert_qty.isnot(None),
             Product.stock_quantity <= Product.stock_alert_qty,
             Product.stock_quantity > 0,
@@ -369,47 +507,158 @@ async def delete_product(
     return {"message": "Produit supprime"}
 
 
-_MAX_CSV_SIZE = 5 * 1024 * 1024  # 5 Mo
-_ALLOWED_MIME_TYPES = {"text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"}
-_ALLOWED_CSV_EXTENSIONS = {".csv"}
+@router.post("/products/{product_id}/image", summary="Upload d'image produit")
+async def upload_product_image(
+    product_id: UUID,
+    file: UploadFile = File(...),
+    ctx: TenantContext = Depends(get_tenant_context),
+    current_user=Depends(require_permission("products.update")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Upload une image vers S3/MinIO/local et met à jour image_url du produit.
+    Formats acceptés : jpeg, png, webp. Taille max : 5 Mo.
+    """
+    from core.storage import StorageService, StorageError
+
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.company_id == ctx.company_id,
+            Product.is_deleted.is_(False),
+        )
+    )
+    product = result.scalar_one_or_none()
+    if not product:
+        raise NotFoundError("Produit")
+
+    content = await file.read()
+    content_type = file.content_type or "application/octet-stream"
+
+    try:
+        url = await StorageService.upload_product_image(
+            company_id=ctx.company_id,
+            product_id=product_id,
+            content=content,
+            content_type=content_type,
+            filename=file.filename or "image",
+        )
+    except StorageError as exc:
+        raise BadRequestError(str(exc))
+
+    product.image_url = url
+    db.add(
+        AuditLog(
+            company_id=ctx.company_id,
+            user_id=current_user.id,
+            action="product.image_uploaded",
+            resource_type="product",
+            resource_id=product.id,
+            new_data={"image_url": url},
+        )
+    )
+    await db.commit()
+    return {"product_id": str(product_id), "image_url": url}
 
 
-@router.post("/products/import", summary="Import CSV produits")
+_MAX_IMPORT_SIZE = 5 * 1024 * 1024  # 5 Mo
+
+_ALLOWED_EXTENSIONS = {
+    ".csv": "csv",
+    ".xlsx": "xlsx",
+    ".xls": "xlsx",
+    ".json": "json",
+}
+
+_ALLOWED_MIME_TYPES = {
+    "text/csv", "application/csv", "text/plain",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/json",
+}
+
+
+@router.post("/products/import", summary="Import catalogue produits (CSV, Excel, JSON)")
 @router.post("/products/import-csv")
-async def import_products_csv(
+async def import_products(
     file: UploadFile = File(...),
     store_id: Optional[UUID] = Query(default=None),
     ctx: TenantContext = Depends(get_tenant_context),
     current_user=Depends(require_permission("products.create")),
     db: AsyncSession = Depends(get_db),
 ):
-    # Validation extension
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if ext not in _ALLOWED_CSV_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Extension invalide. Seuls les fichiers .csv sont acceptés.")
+    """
+    Importe un catalogue produits depuis :
+    - **CSV** : colonnes barcode, name, price_xof, stock_quantity, category, unit, is_available (+ optionnels)
+    - **Excel / XLSX** : même colonnes, première ligne = en-têtes
+    - **JSON** : liste [{barcode, name, price_xof, ...}] ou {products: [...]}
 
-    # Validation MIME
-    if file.content_type and file.content_type.split(";")[0].strip() not in _ALLOWED_MIME_TYPES:
+    Colonnes supportées : barcode, name, price_xof, compare_price_xof, stock_quantity, category,
+    unit, is_available, description, brand, origin_country, weight_g, volume_ml, sku, tax_rate, tags, attributes
+    """
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    fmt = _ALLOWED_EXTENSIONS.get(ext)
+    if not fmt:
         raise HTTPException(
             status_code=400,
-            detail=f"Type de fichier invalide: {file.content_type}. Utilisez un fichier CSV.",
+            detail=f"Format non supporté '{ext}'. Formats acceptés : CSV, Excel (.xlsx), JSON.",
         )
 
-    # Lecture bornée — protection contre les fichiers volumineux
-    content = await file.read(_MAX_CSV_SIZE + 1)
-    if len(content) > _MAX_CSV_SIZE:
+    content_type = (file.content_type or "").lower()
+    if content_type and content_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Type MIME non supporté '{content_type}'.",
+        )
+
+    content = await file.read(_MAX_IMPORT_SIZE + 1)
+    if len(content) > _MAX_IMPORT_SIZE:
         raise HTTPException(status_code=413, detail="Fichier trop volumineux. Taille maximum : 5 Mo.")
 
     service = CatalogResolutionService(db)
-    job = await service.import_csv_catalog(
-        company_id=ctx.company_id,
-        store_id=store_id,
-        created_by_id=current_user.id,
-        file_name=file.filename or "catalog.csv",
-        content=content,
-    )
+
+    if fmt == "csv":
+        job = await service.import_csv_catalog(
+            company_id=ctx.company_id,
+            store_id=store_id,
+            created_by_id=current_user.id,
+            file_name=file.filename or "catalog.csv",
+            content=content,
+        )
+    elif fmt == "xlsx":
+        try:
+            rows = _parse_xlsx_to_rows(content)
+        except BadRequestError:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Impossible de lire le fichier Excel : {e}")
+        csv_content = _rows_to_csv_bytes(rows)
+        job = await service.import_csv_catalog(
+            company_id=ctx.company_id,
+            store_id=store_id,
+            created_by_id=current_user.id,
+            file_name=file.filename or "catalog.xlsx",
+            content=csv_content,
+        )
+    else:  # json
+        try:
+            rows = _parse_json_to_rows(content)
+        except BadRequestError:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Impossible de lire le fichier JSON : {e}")
+        csv_content = _rows_to_csv_bytes(rows)
+        job = await service.import_csv_catalog(
+            company_id=ctx.company_id,
+            store_id=store_id,
+            created_by_id=current_user.id,
+            file_name=file.filename or "catalog.json",
+            content=csv_content,
+        )
+
     return {
         "job_id": str(job.id),
+        "format": fmt,
         "status": job.status,
         "total_rows": job.total_rows,
         "created_count": job.created_count,
