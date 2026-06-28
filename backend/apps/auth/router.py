@@ -564,3 +564,35 @@ async def admin_reset(
     await db.commit()
     logger.info("Superadmin credentials updated and duplicates purged: %s", data.new_email)
     return {"message": "Compte superadmin mis à jour. Accès exclusif accordé.", "email": data.new_email}
+
+
+@router.get("/debug-db-state", include_in_schema=False)
+async def debug_db_state(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    import traceback
+    try:
+        # Check alembic version
+        ver = await db.execute(text("SELECT version_num FROM alembic_version"))
+        versions = [r[0] for r in ver.fetchall()]
+
+        # Check columns on users table
+        cols = await db.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='users' ORDER BY ordinal_position"
+        ))
+        user_cols = [r[0] for r in cols.fetchall()]
+
+        # Try the actual failing query
+        test_err = None
+        try:
+            await db.execute(text("SELECT failed_login_attempts FROM users LIMIT 1"))
+        except Exception as e:
+            test_err = str(e)
+
+        return {
+            "alembic_versions": versions,
+            "users_columns": user_cols,
+            "failed_login_attempts_query_error": test_err,
+        }
+    except Exception as e:
+        return {"error": type(e).__name__, "detail": str(e), "trace": traceback.format_exc()}
