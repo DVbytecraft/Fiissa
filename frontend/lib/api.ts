@@ -202,6 +202,10 @@ export const catalogApi = {
   deleteProduct: (id: string) => api.delete(`/catalog/products/${id}`),
   adjustStock: (productId: string, data: object) =>
     api.post(`/catalog/products/${productId}/stock`, data),
+  uploadImage: (productId: string, formData: FormData) =>
+    api.post(`/catalog/products/${productId}/image`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
   importCSV: (formData: FormData) =>
     api.post("/catalog/products/import", formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -225,10 +229,14 @@ export const ordersApi = {
   getOne: (id: string) => api.get(`/orders/${id}`),
   getMerchantOrders: (status?: string) =>
     api.get("/orders/merchant/pending", { params: { status } }),
+  getMerchantOrderList: (params?: Record<string, any>) =>
+    api.get("/orders/merchant/list", { params }),
   updateStatus: (id: string, status: string, reason?: string) =>
     api.patch(`/orders/${id}/status`, { status, reason }),
   setPickupMethod: (orderId: string, data: object) =>
     api.patch(`/orders/${orderId}/pickup-method`, data),
+  verifyPickupCode: (data: { pickup_code: string; store_id?: string }) =>
+    api.post("/orders/pickups/verify", data),
 };
 
 export const paymentsApi = {
@@ -237,6 +245,8 @@ export const paymentsApi = {
     api.post(`/payments/${paymentId}/submit-proof`, data),
   confirm: (paymentId: string, confirmed: boolean, reason?: string) =>
     api.post(`/payments/${paymentId}/confirm`, { confirmed, reason }),
+  refund: (paymentId: string, data: { reason: string; refund_amount_xof?: number }) =>
+    api.post(`/payments/${paymentId}/refund`, data),
   getPending: () => api.get("/payments/pending"),
   initiateGateway: (paymentId: string, customerPhone: string, provider: string = "paygate") =>
     api.post("/payments/gateway/initiate", { payment_id: paymentId, customer_phone: customerPhone, provider }),
@@ -293,6 +303,7 @@ export const walletApi = {
 export const loyaltyApi = {
   // Client — cartes
   getMyCards: () => api.get("/loyalty/cards/mine"),
+  getCard: (cardId: string) => api.get(`/loyalty/cards/${cardId}`),
   getCardTransactions: (cardId: string) => api.get(`/loyalty/cards/${cardId}/transactions`),
   importExternalCard: (data: object) => api.post("/loyalty/cards/import", data),
 
@@ -359,4 +370,45 @@ export const integrationsApi = {
   regenerateApiKey: () => api.post("/integrations/api-key/regenerate"),
   getPaymentIntegration: () => api.get("/integrations/payment"),
   savePaymentIntegration: (data: { provider: string; credentials: Record<string, string> }) => api.post("/integrations/payment", data),
+};
+
+export const promotionsApi = {
+  getAll: (params?: { is_active?: boolean; page?: number; limit?: number }) =>
+    api.get("/promotions/", { params }),
+  create: (data: {
+    name: string;
+    code?: string;
+    promotion_type: string;
+    value: number;
+    applies_to?: string;
+    target_ids?: string[];
+    minimum_order_amount?: number;
+    usage_limit?: number;
+    per_customer_limit?: number;
+    starts_at?: string;
+    ends_at?: string;
+  }) => api.post("/promotions/", data),
+  getById: (promotionId: string) => api.get(`/promotions/${promotionId}`),
+  update: (promotionId: string, data: object) => api.patch(`/promotions/${promotionId}`, data),
+  deactivate: (promotionId: string) => api.delete(`/promotions/${promotionId}`),
+  validateCode: (data: { code: string; order_amount: number; store_id: string }) =>
+    api.post("/promotions/validate-code", data),
+};
+
+export const deliveryZonesApi = {
+  list: (storeId: string) => api.get(`/stores/${storeId}/delivery-zones`),
+  create: (storeId: string, data: {
+    name: string;
+    description?: string;
+    zone_type?: string;
+    coordinates?: object[];
+    radius_km?: number;
+    base_fee_xof: number;
+    per_km_fee_xof?: number;
+    estimated_minutes?: number;
+  }) => api.post(`/stores/${storeId}/delivery-zones`, data),
+  update: (storeId: string, zoneId: string, data: object) =>
+    api.patch(`/stores/${storeId}/delivery-zones/${zoneId}`, data),
+  delete: (storeId: string, zoneId: string) =>
+    api.delete(`/stores/${storeId}/delivery-zones/${zoneId}`),
 };
