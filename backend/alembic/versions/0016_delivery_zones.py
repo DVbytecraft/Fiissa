@@ -6,8 +6,6 @@ Create Date: 2026-06-27
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
 
 revision = "0016_delivery_zones"
 down_revision = "0015_promotions"
@@ -16,22 +14,23 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "delivery_zones",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("store_id", UUID(as_uuid=True), sa.ForeignKey("stores.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("company_id", UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("name", sa.String(150), nullable=False),
-        sa.Column("description", sa.Text, nullable=True),
-        sa.Column("delivery_fee_xof", sa.Integer, nullable=False, server_default=sa.text("0")),
-        sa.Column("free_delivery_threshold_xof", sa.Integer, nullable=True),
-        sa.Column("estimated_minutes", sa.Integer, nullable=True),
-        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
-    )
-    op.create_index("ix_delivery_zones_store", "delivery_zones", ["store_id"])
-    op.create_index("ix_delivery_zones_company", "delivery_zones", ["company_id"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS delivery_zones (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+            name VARCHAR(150) NOT NULL,
+            description TEXT,
+            delivery_fee_xof INTEGER NOT NULL DEFAULT 0,
+            free_delivery_threshold_xof INTEGER,
+            estimated_minutes INTEGER,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_delivery_zones_store ON delivery_zones(store_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_delivery_zones_company ON delivery_zones(company_id)")
 
 
 def downgrade() -> None:

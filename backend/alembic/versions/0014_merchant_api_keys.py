@@ -6,8 +6,6 @@ Create Date: 2026-06-27
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
 
 
 revision = "0014_merchant_api_keys"
@@ -17,18 +15,19 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "merchant_api_keys",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("company_id", UUID(as_uuid=True), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, unique=True),
-        sa.Column("key_hash", sa.String(64), nullable=False, unique=True),
-        sa.Column("masked_preview", sa.String(60), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("last_used_at", sa.TIMESTAMP(timezone=True), nullable=True),
-    )
-    op.create_index("ix_merchant_api_keys_key_hash", "merchant_api_keys", ["key_hash"], unique=True)
-    op.create_index("ix_merchant_api_keys_company_id", "merchant_api_keys", ["company_id"], unique=True)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS merchant_api_keys (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID NOT NULL UNIQUE REFERENCES companies(id) ON DELETE CASCADE,
+            key_hash VARCHAR(64) NOT NULL UNIQUE,
+            masked_preview VARCHAR(60) NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            last_used_at TIMESTAMP WITH TIME ZONE
+        )
+    """)
+    op.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_merchant_api_keys_key_hash ON merchant_api_keys(key_hash)")
+    op.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_merchant_api_keys_company_id ON merchant_api_keys(company_id)")
 
 
 def downgrade() -> None:

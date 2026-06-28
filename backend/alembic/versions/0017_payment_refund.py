@@ -6,8 +6,6 @@ Create Date: 2026-06-27
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
 
 revision = "0017_payment_refund"
 down_revision = "0016_delivery_zones"
@@ -16,19 +14,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("payments", sa.Column(
-        "refunded_by_id", UUID(as_uuid=True),
-        sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
-    ))
-    op.add_column("payments", sa.Column(
-        "refunded_at", sa.TIMESTAMP(timezone=True), nullable=True,
-    ))
-    op.add_column("payments", sa.Column(
-        "refund_reason", sa.Text, nullable=True,
-    ))
-    op.add_column("payments", sa.Column(
-        "refund_amount_xof", sa.Integer, nullable=True,
-    ))
+    op.execute("""
+        ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS refunded_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP WITH TIME ZONE,
+            ADD COLUMN IF NOT EXISTS refund_reason TEXT,
+            ADD COLUMN IF NOT EXISTS refund_amount_xof INTEGER
+    """)
 
 
 def downgrade() -> None:

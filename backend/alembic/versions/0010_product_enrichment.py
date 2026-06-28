@@ -6,8 +6,6 @@ Create Date: 2026-06-26
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "0010_product_enrichment"
 down_revision = "0009_company_profile_pickup_delegation"
@@ -16,36 +14,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── Identité produit ──────────────────────────────────────────────────────
-    op.add_column("products", sa.Column("brand", sa.String(200), nullable=True))
-    op.add_column("products", sa.Column("origin_country", sa.String(100), nullable=True))
-
-    # ── Poids / volume / dimensions physiques ────────────────────────────────
-    op.add_column("products", sa.Column("weight_g", sa.Integer(), nullable=True,
-                                        comment="Poids net en grammes (ex: 1000 pour 1 kg)"))
-    op.add_column("products", sa.Column("volume_ml", sa.Integer(), nullable=True,
-                                        comment="Volume en millilitres (ex: 1000 pour 1 L)"))
-    op.add_column("products", sa.Column("dimensions", JSONB, nullable=True,
-                                        comment='{"length_cm": 10, "width_cm": 5, "height_cm": 3}'))
-
-    # ── Prix et fiscalité ────────────────────────────────────────────────────
-    op.add_column("products", sa.Column("tax_rate", sa.Integer(), nullable=True,
-                                        comment="Taux TVA en % entier (ex: 18 pour 18%). NULL = taux par défaut"))
-
-    # ── Images multiples ─────────────────────────────────────────────────────
-    op.add_column("products", sa.Column("images", JSONB, nullable=True,
-                                        comment='["https://cdn/.../img2.jpg", "https://cdn/.../img3.jpg"]'))
-
-    # ── Attributs libres et tags ─────────────────────────────────────────────
-    op.add_column("products", sa.Column("attributes", JSONB, nullable=True,
-                                        comment='{"couleur": "rouge", "taille": "XL", "saveur": "vanille"}'))
-    op.add_column("products", sa.Column("tags", JSONB, nullable=True,
-                                        comment='["bio", "halal", "sans-gluten", "promo", "nouveaute"]'))
-
-    # ── Quantités min/max commande ───────────────────────────────────────────
-    op.add_column("products", sa.Column("min_order_qty", sa.Integer(), nullable=False,
-                                        server_default="1"))
-    op.add_column("products", sa.Column("max_order_qty", sa.Integer(), nullable=True))
+    op.execute("""
+        ALTER TABLE products
+            ADD COLUMN IF NOT EXISTS brand VARCHAR(200),
+            ADD COLUMN IF NOT EXISTS origin_country VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS weight_g INTEGER,
+            ADD COLUMN IF NOT EXISTS volume_ml INTEGER,
+            ADD COLUMN IF NOT EXISTS dimensions JSONB,
+            ADD COLUMN IF NOT EXISTS tax_rate INTEGER,
+            ADD COLUMN IF NOT EXISTS images JSONB,
+            ADD COLUMN IF NOT EXISTS attributes JSONB,
+            ADD COLUMN IF NOT EXISTS tags JSONB,
+            ADD COLUMN IF NOT EXISTS min_order_qty INTEGER NOT NULL DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS max_order_qty INTEGER
+    """)
 
 
 def downgrade() -> None:

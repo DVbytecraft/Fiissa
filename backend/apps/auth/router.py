@@ -516,20 +516,6 @@ async def admin_reset(
     data: AdminResetRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Met à jour les credentials du superadmin existant.
-    Endpoint caché — à appeler une seule fois lors de l'initialisation.
-    """
-    try:
-        return await _admin_reset_impl(data, db)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("admin_reset failed: %s", exc)
-        raise HTTPException(status_code=400, detail=f"[DEBUG] {type(exc).__name__}: {exc}")
-
-
-async def _admin_reset_impl(data: AdminResetRequest, db: AsyncSession):
     if len(data.new_password) < 8:
         raise HTTPException(status_code=422, detail="Le mot de passe doit contenir au moins 8 caractères.")
 
