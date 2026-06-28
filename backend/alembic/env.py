@@ -1,12 +1,13 @@
+import asyncio
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 
 # Import tous les modèles pour que Alembic les détecte
 from core.database import Base
 from core.config import settings
 
-# Importer tous les modèles
 import apps.users.models  # noqa
 import apps.companies.models  # noqa
 import apps.stores.models  # noqa
@@ -23,10 +24,6 @@ import apps.support.models  # noqa
 
 config = context.config
 
-# Use the sync URL (psycopg2) for Alembic migrations — more reliable than async.
-# The app itself uses postgresql+asyncpg:// at runtime.
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -34,7 +31,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -46,37 +43,39 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    # sslmode=disable avoids psycopg2 SSL-handshake hang on Render internal network.
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-        connect_args={"sslmode": "disable"},
+def do_run_migrations(connection):
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
     )
+    with context.begin_transaction():
+        context.run_migrations()
 
-    # Alembic creates alembic_version with version_num VARCHAR(32) by default.
-    # Our revision IDs (e.g. "0007_merchant_onboarding_idempotency") exceed 32 chars,
-    # so we pre-create or widen the column to VARCHAR(255) before running migrations.
-    with connectable.connect() as pre_conn:
-        pre_conn.execute(text(
+
+async def run_async_migrations() -> None:
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+
+    async with engine.connect() as conn:
+        # Ensure alembic_version table exists with wide enough version_num column.
+        # Our revision IDs (e.g. "0018_fix_missing_columns") exceed the default 32 chars.
+        await conn.execute(text(
             "CREATE TABLE IF NOT EXISTS alembic_version"
             " (version_num VARCHAR(255) NOT NULL,"
-            " CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+            "  CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
         ))
-        pre_conn.execute(text(
+        await conn.execute(text(
             "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
         ))
-        pre_conn.commit()
+        await conn.commit()
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-        )
-        with context.begin_transaction():
-            context.run_migrations()
+        await conn.run_sync(do_run_migrations)
+
+    await engine.dispose()
+
+
+def run_migrations_online() -> None:
+    asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
