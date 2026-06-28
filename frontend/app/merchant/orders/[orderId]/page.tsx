@@ -13,12 +13,13 @@ import {
   Printer,
   QrCode,
   ReceiptText,
+  RotateCcw,
   Sparkles,
   Play,
   Truck,
 } from "lucide-react";
 import Link from "next/link";
-import { ordersApi, receiptsApi } from "@/lib/api";
+import { ordersApi, receiptsApi, paymentsApi } from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 
@@ -54,6 +55,9 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundAmountXof, setRefundAmountXof] = useState("");
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["order", orderId],
@@ -75,6 +79,23 @@ export default function OrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["merchant-orders"] });
     },
     onError: (e: any) => toast.error(e.response?.data?.message || "Transition invalide"),
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: () =>
+      paymentsApi.refund(order!.payment.id, {
+        reason: refundReason.trim(),
+        ...(refundAmountXof ? { refund_amount_xof: Number(refundAmountXof) } : {}),
+      }),
+    onSuccess: () => {
+      toast.success("Remboursement initié");
+      setShowRefund(false);
+      setRefundReason("");
+      setRefundAmountXof("");
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["merchant-orders"] });
+    },
+    onError: (e: any) => toast.error(e.response?.data?.detail || e.response?.data?.message || "Erreur remboursement"),
   });
 
   const generateReceiptMutation = useMutation({
@@ -309,6 +330,59 @@ export default function OrderDetailPage() {
                 </span>
               </div>
             </div>
+
+            {order.payment.status === "confirmed" && (
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--bd)" }}>
+                {!showRefund ? (
+                  <button
+                    onClick={() => setShowRefund(true)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                    style={{ background: "rgba(220,38,38,0.06)", color: "#DC2626", border: "1.5px solid rgba(220,38,38,0.15)" }}
+                  >
+                    <RotateCcw size={13} />
+                    Rembourser ce paiement
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "#DC2626" }}>Remboursement</p>
+                    <input
+                      placeholder="Raison du remboursement *"
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      className="w-full py-3 px-3 rounded-xl text-sm outline-none"
+                      style={{ border: "1.5px solid rgba(220,38,38,0.3)", background: "var(--bg-app)", color: "var(--tx-body)" }}
+                    />
+                    <input
+                      placeholder={`Montant à rembourser (optionnel, max ${order.payment.amount_xof?.toLocaleString("fr-FR")} FCFA)`}
+                      value={refundAmountXof}
+                      onChange={(e) => setRefundAmountXof(e.target.value)}
+                      type="number"
+                      min="1"
+                      max={order.payment.amount_xof}
+                      className="w-full py-3 px-3 rounded-xl text-sm outline-none"
+                      style={{ border: "1.5px solid var(--bd)", background: "var(--bg-app)", color: "var(--tx-body)" }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setShowRefund(false); setRefundReason(""); setRefundAmountXof(""); }}
+                        className="flex-1 py-2.5 rounded-xl text-xs font-semibold"
+                        style={{ background: "var(--bg-app)", color: "var(--tx-muted)", border: "1px solid var(--bd)" }}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={() => refundMutation.mutate()}
+                        disabled={!refundReason.trim() || refundMutation.isPending}
+                        className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white disabled:opacity-50"
+                        style={{ background: "#DC2626" }}
+                      >
+                        {refundMutation.isPending ? "..." : "Confirmer le remboursement"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ShoppingBag, CreditCard, Package,
   BarChart2, Settings, LogOut, Receipt, Users, Heart,
   Puzzle, Star, HelpCircle, X, Menu, Bell, Phone,
-  Tag, MapPin,
+  Tag, MapPin, Wallet,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 
@@ -31,6 +31,7 @@ const SECONDARY_NAV = [
   { href: "/merchant/subscription",    icon: Star,        label: "Abonnement"      },
   { href: "/merchant/callcenter",      icon: Phone,       label: "Call Center"     },
   { href: "/merchant/support",         icon: HelpCircle,  label: "Support"         },
+  { href: "/merchant/wallet",           icon: Wallet,      label: "Wallet"          },
   { href: "/merchant/settings",        icon: Settings,    label: "Paramètres"      },
 ];
 

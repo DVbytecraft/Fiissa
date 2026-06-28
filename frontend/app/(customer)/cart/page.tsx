@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Gift, MapPin, Minus, Plus, Store, Tag, Trash2, Truck, X } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCartStore, useAuthStore } from "@/lib/store";
-import { loyaltyApi, ordersApi } from "@/lib/api";
+import { loyaltyApi, ordersApi, promotionsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 type DeliveryType = "click_collect" | "delivery";
@@ -20,6 +20,7 @@ export default function CartPage() {
   const [deliveryType, setDeliveryType]     = useState<DeliveryType>("click_collect");
   const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "", landmark: "" });
   const [couponCode, setCouponCode]         = useState("");
+  const [promoResult, setPromoResult]       = useState<{ discount_amount: number; name: string; promotion_type: string } | null>(null);
 
   const { data: loyaltyCard } = useQuery({
     queryKey: ["card-for-company", companyId],
@@ -27,6 +28,28 @@ export default function CartPage() {
       loyaltyApi.getCardForCompany(companyId!).then((r) => r.data),
     enabled: Boolean(isAuthenticated && companyId),
     retry: false,
+  });
+
+  const validatePromoMutation = useMutation({
+    mutationFn: () =>
+      promotionsApi.validateCode({
+        code: couponCode.trim(),
+        order_amount: total(),
+        store_id: storeId!,
+      }),
+    onSuccess: (res) => {
+      const data = res.data;
+      setPromoResult({
+        discount_amount: data.discount_amount ?? data.discount_value ?? 0,
+        name: data.promotion_name ?? data.name ?? couponCode.trim(),
+        promotion_type: data.promotion_type ?? "",
+      });
+      toast.success(`Code valide — ${(data.discount_amount ?? data.discount_value ?? 0).toLocaleString("fr-FR")} FCFA de réduction`);
+    },
+    onError: (e: any) => {
+      setPromoResult(null);
+      toast.error(e.response?.data?.detail || e.response?.data?.message || "Code promo invalide");
+    },
   });
 
   const createOrderMutation = useMutation({
@@ -207,35 +230,57 @@ export default function CartPage() {
           {/* Coupon de réduction */}
           <div
             className="rounded-2xl p-4"
-            style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
+            style={{ background: "#FFFFFF", border: `1px solid ${promoResult ? "rgba(0,214,143,0.3)" : "var(--bd)"}` }}
           >
             <div className="flex items-center gap-2 mb-2">
-              <Tag size={14} style={{ color: "var(--tx-muted)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--tx-muted)" }}>
+              <Tag size={14} style={{ color: promoResult ? "var(--s-600)" : "var(--tx-muted)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: promoResult ? "var(--s-600)" : "var(--tx-muted)" }}>
                 Code promo
               </span>
+              {promoResult && (
+                <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(0,214,143,0.12)", color: "var(--s-600)" }}>
+                  Validé ✓
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <input
                 value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setPromoResult(null); }}
                 placeholder="MONCODE"
                 className="input-mobile flex-1 font-mono text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter" && couponCode.trim()) validatePromoMutation.mutate(); }}
               />
-              {couponCode && (
+              {couponCode && !promoResult && (
                 <button
-                  onClick={() => setCouponCode("")}
+                  onClick={() => validatePromoMutation.mutate()}
+                  disabled={!couponCode.trim() || validatePromoMutation.isPending}
+                  className="px-4 h-12 rounded-xl text-xs font-bold text-white flex-shrink-0 disabled:opacity-50"
+                  style={{ background: "var(--tx-head)" }}
+                >
+                  {validatePromoMutation.isPending ? "..." : "Valider"}
+                </button>
+              )}
+              {promoResult && (
+                <button
+                  onClick={() => { setCouponCode(""); setPromoResult(null); }}
                   className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: "var(--n-100)", color: "var(--tx-muted)" }}
-                  aria-label="Effacer le code"
+                  aria-label="Retirer le code"
                 >
                   <X size={16} />
                 </button>
               )}
             </div>
-            <p className="text-xs mt-1.5" style={{ color: "var(--tx-muted)" }}>
-              Le coupon sera appliqué à la confirmation
-            </p>
+            {promoResult ? (
+              <p className="text-xs mt-1.5 font-semibold" style={{ color: "var(--s-600)" }}>
+                {promoResult.name} — économisez {promoResult.discount_amount.toLocaleString("fr-FR")} FCFA
+              </p>
+            ) : (
+              <p className="text-xs mt-1.5" style={{ color: "var(--tx-muted)" }}>
+                Entrez votre code et appuyez sur Valider
+              </p>
+            )}
           </div>
 
           {/* Récapitulatif */}
@@ -247,10 +292,16 @@ export default function CartPage() {
               <span>Sous-total</span>
               <span>{total().toLocaleString("fr-FR")} FCFA</span>
             </div>
-            {couponCode.trim() && (
-              <div className="flex justify-between text-sm mb-2" style={{ color: "var(--p-500)" }}>
-                <span className="font-semibold">Coupon · {couponCode.trim()}</span>
-                <span>appliqué à la commande</span>
+            {promoResult && (
+              <div className="flex justify-between text-sm mb-2" style={{ color: "var(--s-600)" }}>
+                <span className="font-semibold">Code {couponCode.trim()}</span>
+                <span className="font-bold">−{promoResult.discount_amount.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+            )}
+            {couponCode.trim() && !promoResult && (
+              <div className="flex justify-between text-sm mb-2" style={{ color: "var(--tx-muted)" }}>
+                <span>Coupon · {couponCode.trim()}</span>
+                <span className="text-xs italic">à valider</span>
               </div>
             )}
             <div
@@ -258,7 +309,7 @@ export default function CartPage() {
               style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}
             >
               <span>Total</span>
-              <span>{total().toLocaleString("fr-FR")} FCFA</span>
+              <span>{promoResult ? (total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
         </div>
@@ -376,20 +427,31 @@ export default function CartPage() {
             className="rounded-2xl p-4 space-y-2"
             style={{ background: "#FFFFFF", border: "1px solid var(--bd)" }}
           >
-            {couponCode.trim() && (
+            {promoResult && (
               <div className="flex items-center gap-2">
-                <Tag size={14} style={{ color: "var(--p-500)" }} />
-                <span className="text-sm font-semibold flex-1" style={{ color: "var(--p-500)" }}>
-                  Coupon · {couponCode.trim()}
+                <Tag size={14} style={{ color: "var(--s-600)" }} />
+                <span className="text-sm font-semibold flex-1" style={{ color: "var(--s-600)" }}>
+                  Code {couponCode.trim()} — −{promoResult.discount_amount.toLocaleString("fr-FR")} FCFA
                 </span>
-                <button onClick={() => setCouponCode("")} style={{ color: "var(--tx-muted)" }} aria-label="Retirer le coupon">
+                <button onClick={() => { setCouponCode(""); setPromoResult(null); }} style={{ color: "var(--tx-muted)" }} aria-label="Retirer le coupon">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            {couponCode.trim() && !promoResult && (
+              <div className="flex items-center gap-2">
+                <Tag size={14} style={{ color: "var(--tx-muted)" }} />
+                <span className="text-sm flex-1" style={{ color: "var(--tx-muted)" }}>
+                  Coupon · {couponCode.trim()} (non validé)
+                </span>
+                <button onClick={() => { setCouponCode(""); setPromoResult(null); }} style={{ color: "var(--tx-muted)" }} aria-label="Retirer le coupon">
                   <X size={14} />
                 </button>
               </div>
             )}
             <div className="flex justify-between font-semibold text-sm" style={{ color: "var(--tx-head)" }}>
               <span>Total à payer</span>
-              <span>{total().toLocaleString("fr-FR")} FCFA</span>
+              <span>{promoResult ? (total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
         </div>

@@ -5,7 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ArrowLeft,
+  Award,
+  ChevronDown,
+  ChevronUp,
+  Gift,
   RefreshCw,
+  ShoppingBag,
   Star,
   TrendingDown,
   TrendingUp,
@@ -34,8 +39,98 @@ const SEGMENT_ICON: Record<string, any> = {
   inactive: Users,
 };
 
+// ── Composant profil fidélité ────────────────────────────────────────────────
+
+function LoyaltyProfilePanel({ customerId }: { customerId: string }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["customer-loyalty-profile", customerId],
+    queryFn: () => loyaltyApi.getCustomerProfile(customerId).then((r) => r.data),
+    staleTime: 60_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--bd)" }}>
+        <div className="skeleton h-16 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div
+        className="mt-3 pt-3"
+        style={{ borderTop: "1px solid var(--bd)" }}
+      >
+        <p className="text-xs text-center" style={{ color: "var(--tx-muted)" }}>
+          Impossible de charger le profil fidélité
+        </p>
+      </div>
+    );
+  }
+
+  const segmentColor: Record<string, string> = {
+    vip:      "#F59E0B",
+    loyal:    "#00A86B",
+    active:   "var(--p-500)",
+    at_risk:  "#F97316",
+    new:      "#8B5CF6",
+    inactive: "#6B7280",
+  };
+  const segColor = segmentColor[data.segment] ?? "var(--tx-muted)";
+
+  return (
+    <div className="mt-3 pt-3 space-y-3" style={{ borderTop: "1px solid var(--bd)" }}>
+      <p className="text-xs font-bold uppercase tracking-[0.12em]" style={{ color: "var(--tx-muted)" }}>
+        Profil fidélité
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{ background: "var(--bg-app)", border: "1px solid var(--bd)" }}
+        >
+          <Award size={14} className="mx-auto mb-1" style={{ color: segColor }} />
+          <p className="text-xs font-bold" style={{ color: "var(--tx-head)" }}>
+            {data.segment ?? "—"}
+          </p>
+          <p className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
+            Segment RFM
+          </p>
+        </div>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{ background: "var(--bg-app)", border: "1px solid var(--bd)" }}
+        >
+          <Gift size={14} className="mx-auto mb-1" style={{ color: "var(--s-500)" }} />
+          <p className="text-xs font-bold" style={{ color: "var(--tx-head)" }}>
+            {data.total_points ?? data.points_balance ?? 0}
+          </p>
+          <p className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
+            Points
+          </p>
+        </div>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{ background: "var(--bg-app)", border: "1px solid var(--bd)" }}
+        >
+          <ShoppingBag size={14} className="mx-auto mb-1" style={{ color: "var(--p-500)" }} />
+          <p className="text-xs font-bold" style={{ color: "var(--tx-head)" }}>
+            {data.visit_count ?? data.order_count ?? 0}
+          </p>
+          <p className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
+            Visites
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Page principale ──────────────────────────────────────────────────────────
+
 export default function MerchantCustomersPage() {
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -251,6 +346,40 @@ export default function MerchantCustomersPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Bouton profil fidélité */}
+                <button
+                  onClick={() =>
+                    setExpandedProfileId(
+                      expandedProfileId === score.customer_id ? null : score.customer_id
+                    )
+                  }
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-colors"
+                  style={{
+                    background:
+                      expandedProfileId === score.customer_id
+                        ? "rgba(34,87,255,0.10)"
+                        : "var(--bg-app)",
+                    color:
+                      expandedProfileId === score.customer_id
+                        ? "var(--p-500)"
+                        : "var(--tx-muted)",
+                    border: "1px solid var(--bd)",
+                  }}
+                >
+                  <Award size={12} />
+                  Voir profil fidélité
+                  {expandedProfileId === score.customer_id ? (
+                    <ChevronUp size={12} />
+                  ) : (
+                    <ChevronDown size={12} />
+                  )}
+                </button>
+
+                {/* Panneau profil fidélité */}
+                {expandedProfileId === score.customer_id && (
+                  <LoyaltyProfilePanel customerId={score.customer_id} />
+                )}
               </div>
             );
           })}

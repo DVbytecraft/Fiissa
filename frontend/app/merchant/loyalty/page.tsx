@@ -605,7 +605,7 @@ export default function MerchantLoyaltyPage() {
       {tab === "programmes" && (
         <div className="px-4 pb-8 space-y-3">
           <div className="rounded-2xl overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}>
-            <Link href="/merchant/customers" className="flex items-center px-4 py-4 gap-3 active:opacity-70">
+            <Link href="/merchant/loyalty/intelligence" className="flex items-center px-4 py-4 gap-3 active:opacity-70">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(34,87,255,0.08)" }}>
                 <Users size={18} style={{ color: "var(--p-500)" }} />
               </div>
