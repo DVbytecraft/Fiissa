@@ -7,6 +7,7 @@ import {
   LayoutDashboard, ShoppingBag, CreditCard, Package,
   BarChart2, Settings, LogOut, Receipt, Users, Heart,
   Puzzle, Star, HelpCircle, X, Menu, Bell, Phone,
+  Tag, MapPin,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 
@@ -18,17 +19,19 @@ const PRIMARY_NAV = [
 ];
 
 const SECONDARY_NAV = [
-  { href: "/merchant/reports",       icon: BarChart2,   label: "Rapports"      },
-  { href: "/merchant/notifications", icon: Bell,        label: "Notifications" },
-  { href: "/merchant/receipts",      icon: Receipt,     label: "Reçus"         },
-  { href: "/merchant/customers",     icon: Users,       label: "Clients"       },
-  { href: "/merchant/loyalty",       icon: Heart,       label: "Fidélité",     v2: true },
-  { href: "/merchant/employees",     icon: Users,       label: "Équipe"        },
-  { href: "/merchant/integrations",  icon: Puzzle,      label: "Intégrations"  },
-  { href: "/merchant/subscription",  icon: Star,        label: "Abonnement"    },
-  { href: "/merchant/callcenter",     icon: Phone,       label: "Call Center"   },
-  { href: "/merchant/support",       icon: HelpCircle,  label: "Support"       },
-  { href: "/merchant/settings",      icon: Settings,    label: "Paramètres"    },
+  { href: "/merchant/reports",         icon: BarChart2,   label: "Rapports"        },
+  { href: "/merchant/notifications",   icon: Bell,        label: "Notifications"   },
+  { href: "/merchant/receipts",        icon: Receipt,     label: "Reçus"           },
+  { href: "/merchant/customers",       icon: Users,       label: "Clients"         },
+  { href: "/merchant/promotions",      icon: Tag,         label: "Promotions"      },
+  { href: "/merchant/loyalty",         icon: Heart,       label: "Fidélité",       v2: true },
+  { href: "/merchant/delivery-zones",  icon: MapPin,      label: "Zones livraison" },
+  { href: "/merchant/employees",       icon: Users,       label: "Équipe"          },
+  { href: "/merchant/integrations",    icon: Puzzle,      label: "Intégrations"    },
+  { href: "/merchant/subscription",    icon: Star,        label: "Abonnement"      },
+  { href: "/merchant/callcenter",      icon: Phone,       label: "Call Center"     },
+  { href: "/merchant/support",         icon: HelpCircle,  label: "Support"         },
+  { href: "/merchant/settings",        icon: Settings,    label: "Paramètres"      },
 ];
 
 const ALL_MOBILE_NAV   = PRIMARY_NAV;
