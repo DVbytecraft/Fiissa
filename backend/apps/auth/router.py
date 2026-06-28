@@ -571,18 +571,15 @@ async def debug_db_state(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import text
     import traceback
     try:
-        # Check alembic version
         ver = await db.execute(text("SELECT version_num FROM alembic_version"))
         versions = [r[0] for r in ver.fetchall()]
 
-        # Check columns on users table
         cols = await db.execute(text(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name='users' ORDER BY ordinal_position"
         ))
         user_cols = [r[0] for r in cols.fetchall()]
 
-        # Try the actual failing query
         test_err = None
         try:
             await db.execute(text("SELECT failed_login_attempts FROM users LIMIT 1"))
@@ -596,3 +593,194 @@ async def debug_db_state(db: AsyncSession = Depends(get_db)):
         }
     except Exception as e:
         return {"error": type(e).__name__, "detail": str(e), "trace": traceback.format_exc()}
+
+
+@router.post("/force-migrate", include_in_schema=False)
+async def force_migrate(db: AsyncSession = Depends(get_db)):
+    """
+    Directly applies all idempotent DDL from migrations 0010–0018
+    and stamps alembic_version, bypassing alembic's own runner.
+    Safe to call multiple times — all statements use IF NOT EXISTS / IF EXISTS.
+    """
+    from sqlalchemy import text
+    import traceback
+
+    steps = []
+
+    async def run(label: str, sql: str):
+        try:
+            await db.execute(text(sql))
+            steps.append({"step": label, "status": "ok"})
+        except Exception as e:
+            steps.append({"step": label, "status": "error", "detail": str(e)})
+            raise
+
+    try:
+        # 0010 — product enrichment
+        await run("0010_products", """
+            ALTER TABLE products
+                ADD COLUMN IF NOT EXISTS brand VARCHAR(200),
+                ADD COLUMN IF NOT EXISTS origin_country VARCHAR(100),
+                ADD COLUMN IF NOT EXISTS weight_g INTEGER,
+                ADD COLUMN IF NOT EXISTS volume_ml INTEGER,
+                ADD COLUMN IF NOT EXISTS dimensions JSONB,
+                ADD COLUMN IF NOT EXISTS tax_rate INTEGER,
+                ADD COLUMN IF NOT EXISTS images JSONB,
+                ADD COLUMN IF NOT EXISTS attributes JSONB,
+                ADD COLUMN IF NOT EXISTS tags JSONB,
+                ADD COLUMN IF NOT EXISTS min_order_qty INTEGER NOT NULL DEFAULT 1,
+                ADD COLUMN IF NOT EXISTS max_order_qty INTEGER
+        """)
+
+        # 0011 — account lockout
+        await run("0011_users_lockout", """
+            ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP WITH TIME ZONE
+        """)
+
+        # 0012 — Togo operators (enum values)
+        await run("0012_togo_enum_flooz", """
+            DO $$ BEGIN
+                ALTER TYPE mobile_operator_enum ADD VALUE IF NOT EXISTS 'flooz';
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """)
+        await run("0012_togo_enum_tmoney", """
+            DO $$ BEGIN
+                ALTER TYPE mobile_operator_enum ADD VALUE IF NOT EXISTS 'tmoney';
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """)
+
+        # 0013 — loyalty validation mode
+        await run("0013_loyalty_enum", """
+            DO $$ BEGIN
+                CREATE TYPE loyalty_validation_mode_enum AS ENUM ('auto', 'manual');
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """)
+        await run("0013_company_settings", """
+            ALTER TABLE company_settings
+                ADD COLUMN IF NOT EXISTS loyalty_validation_mode
+                    loyalty_validation_mode_enum NOT NULL DEFAULT 'auto'
+        """)
+
+        # 0014 — merchant API keys
+        await run("0014_merchant_api_keys", """
+            CREATE TABLE IF NOT EXISTS merchant_api_keys (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                name VARCHAR(200) NOT NULL,
+                key_prefix VARCHAR(12) NOT NULL,
+                key_hash VARCHAR(255) NOT NULL,
+                scopes JSONB NOT NULL DEFAULT '[]',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                last_used_at TIMESTAMP WITH TIME ZONE,
+                expires_at TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """)
+        await run("0014_merchant_api_keys_idx1", """
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_merchant_api_keys_key_prefix
+                ON merchant_api_keys(key_prefix)
+        """)
+        await run("0014_merchant_api_keys_idx2", """
+            CREATE INDEX IF NOT EXISTS ix_merchant_api_keys_company_id
+                ON merchant_api_keys(company_id)
+        """)
+
+        # 0015 — promotions
+        await run("0015_promo_type_enum", """
+            DO $$ BEGIN
+                CREATE TYPE promotion_type_enum AS ENUM (
+                    'percentage', 'fixed_amount', 'free_shipping', 'buy_x_get_y'
+                );
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """)
+        await run("0015_promo_applies_enum", """
+            DO $$ BEGIN
+                CREATE TYPE promotion_applies_to_enum AS ENUM (
+                    'all', 'category', 'product', 'minimum_order'
+                );
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """)
+        await run("0015_promotions_table", """
+            CREATE TABLE IF NOT EXISTS promotions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                name VARCHAR(200) NOT NULL,
+                code VARCHAR(50),
+                promotion_type promotion_type_enum NOT NULL,
+                value NUMERIC(12,2) NOT NULL,
+                applies_to promotion_applies_to_enum NOT NULL DEFAULT 'all',
+                target_ids JSONB,
+                minimum_order_amount NUMERIC(12,2),
+                usage_limit INTEGER,
+                usage_count INTEGER NOT NULL DEFAULT 0,
+                per_customer_limit INTEGER,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                starts_at TIMESTAMP WITH TIME ZONE,
+                ends_at TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """)
+        await run("0015_orders_promotion_cols", """
+            ALTER TABLE orders
+                ADD COLUMN IF NOT EXISTS promotion_id UUID REFERENCES promotions(id) ON DELETE SET NULL,
+                ADD COLUMN IF NOT EXISTS promotion_code VARCHAR(50)
+        """)
+
+        # 0016 — delivery zones
+        await run("0016_delivery_zones", """
+            CREATE TABLE IF NOT EXISTS delivery_zones (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+                name VARCHAR(200) NOT NULL,
+                description TEXT,
+                zone_type VARCHAR(50) NOT NULL DEFAULT 'polygon',
+                coordinates JSONB NOT NULL DEFAULT '[]',
+                radius_km NUMERIC(8,2),
+                base_fee_xof INTEGER NOT NULL DEFAULT 0,
+                per_km_fee_xof INTEGER NOT NULL DEFAULT 0,
+                estimated_minutes INTEGER,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        """)
+
+        # 0017 — payment refund columns
+        await run("0017_payments_refund", """
+            ALTER TABLE payments
+                ADD COLUMN IF NOT EXISTS refunded_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP WITH TIME ZONE,
+                ADD COLUMN IF NOT EXISTS refund_reason TEXT,
+                ADD COLUMN IF NOT EXISTS refund_amount_xof INTEGER
+        """)
+
+        # Stamp alembic_version
+        await run("stamp_alembic", """
+            DELETE FROM alembic_version
+        """)
+        await run("stamp_alembic_insert", """
+            INSERT INTO alembic_version (version_num)
+            VALUES ('0018_fix_missing_columns')
+        """)
+
+        await db.commit()
+        return {"status": "success", "steps": steps}
+
+    except Exception as e:
+        await db.rollback()
+        return {
+            "status": "error",
+            "steps": steps,
+            "error": type(e).__name__,
+            "detail": str(e),
+            "trace": traceback.format_exc(),
+        }
