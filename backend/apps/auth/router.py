@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.auth.schemas import (
@@ -557,6 +557,14 @@ async def admin_reset(
         user.last_name = data.new_last_name
     user.is_verified = True
 
+    # Remove all other super_admin roles so only this one account controls the system
+    await db.execute(
+        delete(UserCompanyRole).where(
+            UserCompanyRole.role == "super_admin",
+            UserCompanyRole.user_id != user.id,
+        )
+    )
+
     await db.commit()
-    logger.info("Superadmin credentials updated: %s", data.new_email)
-    return {"message": "Credentials superadmin mis à jour.", "email": data.new_email}
+    logger.info("Superadmin credentials updated and duplicates purged: %s", data.new_email)
+    return {"message": "Compte superadmin mis à jour. Accès exclusif accordé.", "email": data.new_email}
