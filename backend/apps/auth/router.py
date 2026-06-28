@@ -523,22 +523,28 @@ async def admin_reset(
     if len(data.new_password) < 8:
         raise HTTPException(status_code=422, detail="Le mot de passe doit contenir au moins 8 caractères.")
 
+    # Use .limit(1) + .scalars().first() to safely handle multiple super_admin rows
     role_result = await db.execute(
-        select(UserCompanyRole).where(UserCompanyRole.role == "super_admin")
+        select(UserCompanyRole)
+        .where(UserCompanyRole.role == "super_admin")
+        .limit(1)
     )
-    role = role_result.scalar_one_or_none()
+    role = role_result.scalars().first()
     if not role:
         raise HTTPException(status_code=404, detail="Aucun superadmin trouvé.")
 
-    user_result = await db.execute(select(User).where(User.id == role.user_id))
-    user = user_result.scalar_one_or_none()
+    user_result = await db.execute(
+        select(User).where(User.id == role.user_id).limit(1)
+    )
+    user = user_result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur superadmin introuvable.")
 
-    email_conflict = await db.execute(
-        select(User).where(User.email == data.new_email, User.id != user.id)
+    # Check email conflict only against OTHER users
+    email_conflict_result = await db.execute(
+        select(User.id).where(User.email == data.new_email, User.id != user.id).limit(1)
     )
-    if email_conflict.scalar_one_or_none():
+    if email_conflict_result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Cet email est déjà utilisé par un autre compte.")
 
     user.email = data.new_email
