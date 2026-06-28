@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Package, AlertTriangle, Upload, Pencil, Trash2, BarChart2, X } from "lucide-react";
+import { Plus, Search, Package, AlertTriangle, Upload, Pencil, Trash2, BarChart2, X, Camera } from "lucide-react";
 import { catalogApi } from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -267,6 +267,27 @@ function ProductRow({
   onDelete: (id: string) => void;
   onAdjustStock: (p: any) => void;
 }) {
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    try {
+      await catalogApi.uploadImage(product.id, formData);
+      toast.success("Image mise à jour");
+      queryClient.invalidateQueries({ queryKey: ["merchant-products"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Erreur upload");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div
       style={{ background: "var(--bg-card)", border: "1px solid var(--bd)" }}
@@ -326,6 +347,24 @@ function ProductRow({
         </div>
 
         <div className="flex gap-1">
+          <label
+            title="Changer l'image"
+            className="p-2 rounded-lg cursor-pointer"
+            style={{ color: uploading ? "var(--p-500)" : "var(--tx-muted)" }}
+          >
+            {uploading ? (
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Camera size={16} />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={uploading}
+            />
+          </label>
           <button
             onClick={() => onAdjustStock(product)}
             style={{ color: "var(--tx-muted)" }}
