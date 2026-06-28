@@ -605,23 +605,19 @@ async def debug_db_state(db: AsyncSession = Depends(get_db)):
 async def force_migrate(db: AsyncSession = Depends(get_db)):
     """
     Directly applies all idempotent DDL from migrations 0010–0018.
-    Each step runs in its own savepoint so failures are isolated.
-    Safe to call multiple times.
+    Each step runs in its own SQLAlchemy nested transaction (savepoint)
+    so failures are isolated. Safe to call multiple times.
     """
     from sqlalchemy import text
-    import traceback
 
     steps = []
 
     async def run(label: str, sql: str):
-        sp = label.replace("-", "_")
         try:
-            await db.execute(text(f"SAVEPOINT {sp}"))
-            await db.execute(text(sql))
-            await db.execute(text(f"RELEASE SAVEPOINT {sp}"))
+            async with db.begin_nested():
+                await db.execute(text(sql))
             steps.append({"step": label, "status": "ok"})
         except Exception as e:
-            await db.execute(text(f"ROLLBACK TO SAVEPOINT {sp}"))
             steps.append({"step": label, "status": "skipped", "detail": str(e)[:200]})
 
     # 0010 — product enrichment
