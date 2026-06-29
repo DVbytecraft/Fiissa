@@ -331,7 +331,7 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {order.payment.status === "confirmed" && (
+            {order.payment.status === "confirmed" && order.status !== "refunded" && (
               <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--bd)" }}>
                 {!showRefund ? (
                   <button

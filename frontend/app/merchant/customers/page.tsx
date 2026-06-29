@@ -287,7 +287,7 @@ export default function MerchantCustomersPage() {
                       >
                         Client ·{" "}
                         <span className="font-mono text-xs">
-                          {score.customer_id.slice(0, 8)}
+                          {(score.customer_id ?? "").slice(0, 8)}
                         </span>
                       </p>
                       <span

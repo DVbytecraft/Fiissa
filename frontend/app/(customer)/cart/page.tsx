@@ -309,7 +309,7 @@ export default function CartPage() {
               style={{ color: "var(--tx-head)", borderTop: "1px solid var(--bd)" }}
             >
               <span>Total</span>
-              <span>{promoResult ? (total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
+              <span>{promoResult ? Math.max(0, total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
         </div>
@@ -451,7 +451,7 @@ export default function CartPage() {
             )}
             <div className="flex justify-between font-semibold text-sm" style={{ color: "var(--tx-head)" }}>
               <span>Total à payer</span>
-              <span>{promoResult ? (total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
+              <span>{promoResult ? Math.max(0, total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA</span>
             </div>
           </div>
         </div>
@@ -473,7 +473,7 @@ export default function CartPage() {
               Création de la commande…
             </span>
           ) : step === "cart" ? (
-            `Commander · ${total().toLocaleString("fr-FR")} FCFA`
+            `Commander · ${promoResult ? Math.max(0, total() - promoResult.discount_amount).toLocaleString("fr-FR") : total().toLocaleString("fr-FR")} FCFA`
           ) : (
             "Confirmer et payer"
           )}
